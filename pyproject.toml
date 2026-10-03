@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sre-toolkit"
+version = "0.1.0"
+description = "CLI toolkit for SRE / on-call workflows: log triage, alert noise analysis, runbook helpers."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+sre-toolkit = "sre_toolkit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
