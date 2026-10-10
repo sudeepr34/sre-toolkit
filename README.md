@@ -15,6 +15,9 @@ pip install -e .
 ```bash
 # Summarize a log file: counts by level, error rate, top error messages
 sre-toolkit logs /var/log/app.log --top 10
+
+# Analyze alert noise from a JSON alert dump: duplicates, flapping
+sre-toolkit alerts alerts.json --top 5
 ```
 
 Example output:
@@ -34,7 +37,7 @@ top errors:
 ## Roadmap
 
 - [x] Log triage (`logs` command)
-- [ ] Alert noise analysis: group duplicate alerts, detect flapping
+- [x] Alert noise analysis: group duplicate alerts, detect flapping (`alerts` command)
 - [ ] Runbook checklist runner for incidents
 - [ ] On-call handoff notes generator
 
