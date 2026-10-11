@@ -38,7 +38,7 @@ top errors:
 
 - [x] Log triage (`logs` command)
 - [x] Alert noise analysis: group duplicate alerts, detect flapping (`alerts` command)
-- [ ] Runbook checklist runner for incidents
+- [x] Runbook checklist runner for incidents (`runbook` command)
 - [ ] On-call handoff notes generator
 
 ## Development

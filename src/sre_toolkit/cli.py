@@ -7,6 +7,7 @@ import sys
 
 from .alert_noise import noise_report
 from .log_triage import error_rate, summarize
+from .runbook import db_failover_runbook
 
 
 def cmd_logs(args: argparse.Namespace) -> int:
@@ -45,6 +46,18 @@ def cmd_alerts(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_runbook(args: argparse.Namespace) -> int:
+    runbook = db_failover_runbook()
+    if args.complete:
+        for raw in args.complete.split(","):
+            runbook.complete(int(raw.strip()) - 1)
+    print(runbook.to_markdown())
+    nxt = runbook.next_step
+    if nxt is not None:
+        print(f"\nnext step: {nxt.title} (owner: {nxt.owner})")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sre-toolkit", description="Small CLI utilities for on-call SRE work."
@@ -64,6 +77,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--top", type=int, default=5, help="Top alert groups to show."
     )
     alerts.set_defaults(func=cmd_alerts)
+
+    runbook = sub.add_parser("runbook", help="Print an incident runbook checklist.")
+    runbook.add_argument(
+        "--complete",
+        default="",
+        help="Comma-separated 1-based step numbers to mark done (e.g. --complete 1,2).",
+    )
+    runbook.set_defaults(func=cmd_runbook)
     return parser
 
 

@@ -36,3 +36,24 @@ def test_alerts_command_flags_flapping(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "flapping:" in out
     assert "[FLAPPING]" in out
+
+
+def test_runbook_command_prints_checklist(capsys):
+    rc = main(["runbook"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "# Database primary failover" in out
+    assert "- [ ] 1. Confirm primary is unhealthy" in out
+    assert "Progress: 0% (0/6)" in out
+    assert "next step: Confirm primary is unhealthy" in out
+
+
+def test_runbook_command_marks_steps_complete(capsys):
+    rc = main(["runbook", "--complete", "1,2"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "- [x] 1. Confirm primary is unhealthy" in out
+    assert "- [x] 2. Page DBA secondary" in out
+    assert "- [ ] 3." in out
+    assert "Progress: 33% (2/6)" in out
+    assert "next step: Promote replica" in out
