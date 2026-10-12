@@ -6,6 +6,7 @@ import json
 import sys
 
 from .alert_noise import noise_report
+from .handoff import Handoff, handoff_from_dict
 from .log_triage import error_rate, summarize
 from .runbook import db_failover_runbook
 
@@ -58,6 +59,24 @@ def cmd_runbook(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_handoff(args: argparse.Namespace) -> int:
+    if args.file:
+        with open(args.file) as handle:
+            handoff = handoff_from_dict(json.load(handle))
+        for field in ("shift", "outgoing", "incoming"):
+            value = getattr(args, field)
+            if value:
+                setattr(handoff, field, value)
+    else:
+        handoff = Handoff(
+            shift=args.shift or "",
+            outgoing=args.outgoing or "on-call",
+            incoming=args.incoming or "on-call",
+        )
+    print(handoff.to_markdown())
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sre-toolkit", description="Small CLI utilities for on-call SRE work."
@@ -85,6 +104,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated 1-based step numbers to mark done (e.g. --complete 1,2).",
     )
     runbook.set_defaults(func=cmd_runbook)
+
+    handoff = sub.add_parser("handoff", help="Generate on-call handoff notes.")
+    handoff.add_argument(
+        "--file",
+        default="",
+        help="JSON file with handoff sections (shift, outgoing, incoming, "
+        "open_incidents, watch_items, follow_ups, recent_changes). Without "
+        "--file, prints an empty handoff template for the shift.",
+    )
+    handoff.add_argument("--shift", default=None, help="Shift label, e.g. 2026-10-12.")
+    handoff.add_argument("--outgoing", default=None, help="Outgoing on-call.")
+    handoff.add_argument("--incoming", default=None, help="Incoming on-call.")
+    handoff.set_defaults(func=cmd_handoff)
     return parser
 
 

@@ -18,6 +18,10 @@ sre-toolkit logs /var/log/app.log --top 10
 
 # Analyze alert noise from a JSON alert dump: duplicates, flapping
 sre-toolkit alerts alerts.json --top 5
+
+# Generate on-call handoff notes (empty template, or from a JSON file)
+sre-toolkit handoff --shift 2026-10-12 --outgoing priya --incoming sudeep
+sre-toolkit handoff --file handoff.json
 ```
 
 Example output:
@@ -39,7 +43,7 @@ top errors:
 - [x] Log triage (`logs` command)
 - [x] Alert noise analysis: group duplicate alerts, detect flapping (`alerts` command)
 - [x] Runbook checklist runner for incidents (`runbook` command)
-- [ ] On-call handoff notes generator
+- [x] On-call handoff notes generator (`handoff` command)
 
 ## Development
 

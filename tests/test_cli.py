@@ -57,3 +57,44 @@ def test_runbook_command_marks_steps_complete(capsys):
     assert "- [ ] 3." in out
     assert "Progress: 33% (2/6)" in out
     assert "next step: Promote replica" in out
+
+
+def test_handoff_command_prints_template(capsys):
+    rc = main(["handoff", "--shift", "2026-10-12", "--outgoing", "priya"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "# On-call handoff: 2026-10-12" in out
+    assert "- Outgoing: priya" in out
+    assert "## Open incidents" in out
+    assert "## Pending follow-ups" in out
+
+
+def test_handoff_command_renders_json_file(tmp_path, capsys):
+    payload = {
+        "shift": "2026-10-12",
+        "outgoing": "priya",
+        "incoming": "sudeep",
+        "open_incidents": [{"title": "DB latency spike", "severity": "SEV-2"}],
+        "follow_ups": [{"task": "rotate the schedule", "due": "Tue"}],
+    }
+    path = tmp_path / "handoff.json"
+    path.write_text(json.dumps(payload))
+    rc = main(["handoff", "--file", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "# On-call handoff: 2026-10-12" in out
+    assert "- Outgoing: priya" in out
+    assert "- Incoming: sudeep" in out
+    assert "- [SEV-2] DB latency spike (mitigated, owner: on-call)" in out
+    assert "- rotate the schedule (owner: on-call, due: Tue)" in out
+
+
+def test_handoff_cli_flags_override_json_file(tmp_path, capsys):
+    payload = {"shift": "2026-10-12", "incoming": "sudeep"}
+    path = tmp_path / "handoff.json"
+    path.write_text(json.dumps(payload))
+    rc = main(["handoff", "--file", str(path), "--incoming", "anil"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "- Incoming: anil" in out
+    assert "# On-call handoff: 2026-10-12" in out
