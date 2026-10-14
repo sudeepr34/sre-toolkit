@@ -22,6 +22,9 @@ sre-toolkit alerts alerts.json --top 5
 # Generate on-call handoff notes (empty template, or from a JSON file)
 sre-toolkit handoff --shift 2026-10-12 --outgoing priya --incoming sudeep
 sre-toolkit handoff --file handoff.json
+
+# Start-of-shift brief: alert noise + carryover from the last handoff
+sre-toolkit brief alerts.json --handoff handoff.json --shift 2026-10-13
 ```
 
 Example output:
@@ -44,6 +47,7 @@ top errors:
 - [x] Alert noise analysis: group duplicate alerts, detect flapping (`alerts` command)
 - [x] Runbook checklist runner for incidents (`runbook` command)
 - [x] On-call handoff notes generator (`handoff` command)
+- [x] Start-of-shift brief: alert noise + carryover (`brief` command)
 
 ## Development
 

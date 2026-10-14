@@ -6,6 +6,7 @@ import json
 import sys
 
 from .alert_noise import noise_report
+from .brief import brief_markdown
 from .handoff import Handoff, handoff_from_dict
 from .log_triage import error_rate, summarize
 from .runbook import db_failover_runbook
@@ -56,6 +57,17 @@ def cmd_runbook(args: argparse.Namespace) -> int:
     nxt = runbook.next_step
     if nxt is not None:
         print(f"\nnext step: {nxt.title} (owner: {nxt.owner})")
+    return 0
+
+
+def cmd_brief(args: argparse.Namespace) -> int:
+    with open(args.alerts) as handle:
+        alerts = json.load(handle)
+    handoff = None
+    if args.handoff:
+        with open(args.handoff) as handle:
+            handoff = handoff_from_dict(json.load(handle))
+    print(brief_markdown(alerts, handoff=handoff, shift=args.shift or ""))
     return 0
 
 
@@ -117,6 +129,21 @@ def build_parser() -> argparse.ArgumentParser:
     handoff.add_argument("--outgoing", default=None, help="Outgoing on-call.")
     handoff.add_argument("--incoming", default=None, help="Incoming on-call.")
     handoff.set_defaults(func=cmd_handoff)
+
+    brief = sub.add_parser(
+        "brief", help="Render a start-of-shift brief from alerts + last handoff."
+    )
+    brief.add_argument(
+        "alerts", help="Path to a JSON file containing a list of alerts."
+    )
+    brief.add_argument(
+        "--handoff",
+        default="",
+        help="JSON handoff file from the previous shift, for the carryover "
+        "section (open incidents, watch items, follow-ups).",
+    )
+    brief.add_argument("--shift", default=None, help="Shift label, e.g. 2026-10-13.")
+    brief.set_defaults(func=cmd_brief)
     return parser
 
 
