@@ -9,6 +9,7 @@ from .alert_noise import noise_report
 from .brief import brief_markdown
 from .handoff import Handoff, handoff_from_dict
 from .log_triage import error_rate, summarize
+from .postmortem import Postmortem, postmortem_from_dict
 from .runbook import db_failover_runbook
 
 
@@ -57,6 +58,24 @@ def cmd_runbook(args: argparse.Namespace) -> int:
     nxt = runbook.next_step
     if nxt is not None:
         print(f"\nnext step: {nxt.title} (owner: {nxt.owner})")
+    return 0
+
+
+def cmd_postmortem(args: argparse.Namespace) -> int:
+    if args.file:
+        with open(args.file) as handle:
+            postmortem = postmortem_from_dict(json.load(handle))
+        for field in ("title", "date", "severity"):
+            value = getattr(args, field)
+            if value:
+                setattr(postmortem, field, value)
+    else:
+        postmortem = Postmortem(
+            title=args.title or "untitled incident",
+            date=args.date or "",
+            severity=args.severity or "SEV-3",
+        )
+    print(postmortem.to_markdown())
     return 0
 
 
@@ -144,6 +163,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     brief.add_argument("--shift", default=None, help="Shift label, e.g. 2026-10-13.")
     brief.set_defaults(func=cmd_brief)
+
+    postmortem = sub.add_parser(
+        "postmortem",
+        help="Generate a blameless postmortem from an incident timeline.",
+    )
+    postmortem.add_argument(
+        "--file",
+        default="",
+        help="JSON file with postmortem sections (title, date, severity, "
+        "summary, timeline, contributing_factors, went_well, action_items). "
+        "Without --file, prints an empty postmortem template.",
+    )
+    postmortem.add_argument("--title", default=None, help="Incident title.")
+    postmortem.add_argument("--date", default=None, help="Incident date.")
+    postmortem.add_argument(
+        "--severity", default=None, help="Severity, e.g. SEV-1."
+    )
+    postmortem.set_defaults(func=cmd_postmortem)
     return parser
 
 

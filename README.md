@@ -25,6 +25,10 @@ sre-toolkit handoff --file handoff.json
 
 # Start-of-shift brief: alert noise + carryover from the last handoff
 sre-toolkit brief alerts.json --handoff handoff.json --shift 2026-10-13
+
+# Blameless postmortem from an incident timeline (empty template, or from a JSON file)
+sre-toolkit postmortem --title "db outage" --severity SEV-1
+sre-toolkit postmortem --file incident.json
 ```
 
 Example output:
@@ -48,6 +52,7 @@ top errors:
 - [x] Runbook checklist runner for incidents (`runbook` command)
 - [x] On-call handoff notes generator (`handoff` command)
 - [x] Start-of-shift brief: alert noise + carryover (`brief` command)
+- [x] Blameless postmortem generator with timeline milestones (`postmortem` command)
 
 ## Development
 
