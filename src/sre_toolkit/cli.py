@@ -11,6 +11,7 @@ from .handoff import Handoff, handoff_from_dict
 from .log_triage import error_rate, summarize
 from .postmortem import Postmortem, postmortem_from_dict
 from .runbook import db_failover_runbook
+from .slo import slo_assessment_from_dict
 
 
 def cmd_logs(args: argparse.Namespace) -> int:
@@ -76,6 +77,28 @@ def cmd_postmortem(args: argparse.Namespace) -> int:
             severity=args.severity or "SEV-3",
         )
     print(postmortem.to_markdown())
+    return 0
+
+
+def cmd_slo(args: argparse.Namespace) -> int:
+    data: dict = {}
+    if args.file:
+        with open(args.file) as handle:
+            data = json.load(handle)
+    if args.target is not None:
+        data["slo_target"] = args.target / 100
+    if args.error_rate is not None:
+        data["observed_error_ratio"] = args.error_rate / 100
+    if args.window_hours is not None:
+        data["window_hours"] = args.window_hours
+    if args.elapsed_hours is not None:
+        data["elapsed_hours"] = args.elapsed_hours
+    try:
+        assessment = slo_assessment_from_dict(data)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(assessment.to_markdown())
     return 0
 
 
@@ -181,6 +204,38 @@ def build_parser() -> argparse.ArgumentParser:
         "--severity", default=None, help="Severity, e.g. SEV-1."
     )
     postmortem.set_defaults(func=cmd_postmortem)
+
+    slo = sub.add_parser(
+        "slo", help="Assess SLO burn rate and error budget."
+    )
+    slo.add_argument(
+        "--file",
+        default="",
+        help="JSON file with slo_target, observed_error_ratio (as fractions), "
+        "window_hours, elapsed_hours. CLI flags override the file.",
+    )
+    slo.add_argument(
+        "--target", type=float, default=None, help="SLO target in percent, e.g. 99.9."
+    )
+    slo.add_argument(
+        "--error-rate",
+        type=float,
+        default=None,
+        help="Observed error ratio in percent, e.g. 0.5.",
+    )
+    slo.add_argument(
+        "--window-hours",
+        type=float,
+        default=None,
+        help="Compliance window in hours (default 720).",
+    )
+    slo.add_argument(
+        "--elapsed-hours",
+        type=float,
+        default=None,
+        help="Hours elapsed in the window (default: the whole window).",
+    )
+    slo.set_defaults(func=cmd_slo)
     return parser
 
 

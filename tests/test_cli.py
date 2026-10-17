@@ -98,3 +98,28 @@ def test_handoff_cli_flags_override_json_file(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "- Incoming: anil" in out
     assert "# On-call handoff: 2026-10-12" in out
+
+
+def test_slo_command_assesses_burn_rate(capsys):
+    rc = main(["slo", "--target", "99.9", "--error-rate", "0.5"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Burn rate: 5.00x" in out
+    assert "Severity: **watch**" in out
+
+
+def test_slo_command_rejects_bad_target(capsys):
+    rc = main(["slo", "--target", "100"])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "error:" in err
+
+
+def test_slo_command_reads_json_file(tmp_path, capsys):
+    path = tmp_path / "slo.json"
+    path.write_text(json.dumps({"slo_target": 0.99, "observed_error_ratio": 0.02}))
+    rc = main(["slo", "--file", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Burn rate: 2.00x" in out
+    assert "Severity: **watch**" in out
