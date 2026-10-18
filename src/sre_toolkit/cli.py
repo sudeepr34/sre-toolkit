@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime
 
 from .alert_noise import noise_report
 from .brief import brief_markdown
@@ -12,6 +13,7 @@ from .log_triage import error_rate, summarize
 from .postmortem import Postmortem, postmortem_from_dict
 from .runbook import db_failover_runbook
 from .slo import slo_assessment_from_dict
+from .deploy import deploy_gate_from_dict, parse_datetime
 
 
 def cmd_logs(args: argparse.Namespace) -> int:
@@ -78,6 +80,27 @@ def cmd_postmortem(args: argparse.Namespace) -> int:
         )
     print(postmortem.to_markdown())
     return 0
+
+
+def cmd_deploy(args: argparse.Namespace) -> int:
+    """Exit 0 when deploys are allowed, 1 when blocked, 2 on input error."""
+    try:
+        moment = parse_datetime(args.now) if args.now else datetime.now()
+    except ValueError as exc:
+        print(f"error: bad --now value: {exc}", file=sys.stderr)
+        return 2
+    try:
+        if args.freezes:
+            with open(args.freezes) as handle:
+                gate = deploy_gate_from_dict(json.load(handle))
+        else:
+            gate = deploy_gate_from_dict({})
+    except (ValueError, KeyError) as exc:
+        print(f"error: bad freeze calendar: {exc}", file=sys.stderr)
+        return 2
+    result = gate.check(moment)
+    print(result.to_markdown())
+    return 0 if result.allowed else 1
 
 
 def cmd_slo(args: argparse.Namespace) -> int:
@@ -236,6 +259,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Hours elapsed in the window (default: the whole window).",
     )
     slo.set_defaults(func=cmd_slo)
+
+    deploy = sub.add_parser(
+        "deploy", help="Check the change-freeze gate before deploying."
+    )
+    deploy.add_argument(
+        "--freezes",
+        default="",
+        help="JSON freeze calendar: {'freezes': [{'kind': 'explicit', 'name', "
+        "'start', 'end', 'reason'} | {'kind': 'weekly', 'name', 'weekday', "
+        "'start_time', 'end_weekday', 'end_time', 'reason'}]}. Without it, "
+        "no gates apply.",
+    )
+    deploy.add_argument(
+        "--now",
+        default=None,
+        help="Evaluate at this ISO datetime instead of now (for testing).",
+    )
+    deploy.set_defaults(func=cmd_deploy)
     return parser
 
 

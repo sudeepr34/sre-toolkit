@@ -1,5 +1,7 @@
 # sre-toolkit
 
+[![CI](https://github.com/sudeepr34/sre-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/sudeepr34/sre-toolkit/actions/workflows/ci.yml)
+
 A Python CLI toolkit for SRE / on-call workflows. Small, dependency-free utilities
 for the things on-call engineers do every day: triage logs, cut alert noise,
 and run incidents from checklists instead of memory.
@@ -33,6 +35,10 @@ sre-toolkit postmortem --file incident.json
 # SLO burn-rate assessment: page/ticket/watch severity from error budget math
 sre-toolkit slo --target 99.9 --error-rate 0.5 --window-hours 720
 sre-toolkit slo --file slo.json --elapsed-hours 168
+
+# Change-freeze gate: exit 0 when deploys are allowed, 1 when blocked
+sre-toolkit deploy --freezes freezes.json
+sre-toolkit deploy --freezes freezes.json --now 2026-10-19T12:00
 ```
 
 Example output:
@@ -58,6 +64,7 @@ top errors:
 - [x] Start-of-shift brief: alert noise + carryover (`brief` command)
 - [x] Blameless postmortem generator with timeline milestones (`postmortem` command)
 - [x] SLO burn-rate and error-budget assessment (`slo` command)
+- [x] Change-freeze gate for deployments (`deploy` command)
 
 ## Development
 

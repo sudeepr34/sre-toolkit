@@ -123,3 +123,38 @@ def test_slo_command_reads_json_file(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "Burn rate: 2.00x" in out
     assert "Severity: **watch**" in out
+
+
+def test_deploy_command_allowed_without_freezes(capsys):
+    rc = main(["deploy", "--now", "2026-10-18T12:00"])
+    assert rc == 0
+    assert "ALLOWED" in capsys.readouterr().out
+
+
+def test_deploy_command_blocked_in_freeze_window(tmp_path, capsys):
+    path = tmp_path / "freezes.json"
+    path.write_text(
+        json.dumps(
+            {
+                "freezes": [
+                    {
+                        "name": "diwali",
+                        "start": "2026-10-18T00:00",
+                        "end": "2026-10-20T00:00",
+                        "reason": "festival blackout",
+                    }
+                ]
+            }
+        )
+    )
+    rc = main(["deploy", "--freezes", str(path), "--now", "2026-10-19T12:00"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "BLOCKED" in out
+    assert "diwali" in out
+
+
+def test_deploy_command_rejects_bad_now(capsys):
+    rc = main(["deploy", "--now", "not-a-date"])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
