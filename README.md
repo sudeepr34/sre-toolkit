@@ -39,6 +39,10 @@ sre-toolkit slo --file slo.json --elapsed-hours 168
 # Change-freeze gate: exit 0 when deploys are allowed, 1 when blocked
 sre-toolkit deploy --freezes freezes.json
 sre-toolkit deploy --freezes freezes.json --now 2026-10-19T12:00
+
+# Status-page draft: customer-facing incident updates in Markdown
+sre-toolkit comms --title "checkout api errors" --status identified --severity SEV-2
+sre-toolkit comms --file status.json --message "Rollback complete, monitoring." --now 2026-10-19T10:30
 ```
 
 Example output:
@@ -65,6 +69,7 @@ top errors:
 - [x] Blameless postmortem generator with timeline milestones (`postmortem` command)
 - [x] SLO burn-rate and error-budget assessment (`slo` command)
 - [x] Change-freeze gate for deployments (`deploy` command)
+- [x] Status-page update drafter for incidents (`comms` command)
 
 ## Development
 

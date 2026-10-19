@@ -8,6 +8,7 @@ from datetime import datetime
 
 from .alert_noise import noise_report
 from .brief import brief_markdown
+from .comms import STATUSES, StatusUpdate, status_page_from_dict
 from .handoff import Handoff, handoff_from_dict
 from .log_triage import error_rate, summarize
 from .postmortem import Postmortem, postmortem_from_dict
@@ -122,6 +123,44 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_comms(args: argparse.Namespace) -> int:
+    if args.file:
+        with open(args.file) as handle:
+            page = status_page_from_dict(json.load(handle))
+        for field in ("title", "severity", "next_update"):
+            value = getattr(args, field)
+            if value:
+                setattr(page, field, value)
+        if args.status:
+            status = args.status.lower()
+            if status not in STATUSES:
+                print(
+                    f"error: unknown status {args.status!r}; "
+                    f"expected one of {', '.join(STATUSES)}",
+                    file=sys.stderr,
+                )
+                return 2
+            page.status = status
+        if args.message:
+            page.updates.append(
+                StatusUpdate(
+                    timestamp=args.now or "",
+                    status=page.status,
+                    message=args.message,
+                )
+            )
+    else:
+        page = status_page_from_dict(
+            {
+                "title": args.title or "untitled incident",
+                "status": (args.status or "investigating"),
+                "severity": args.severity or "SEV-3",
+            }
+        )
+    print(page.to_markdown())
     return 0
 
 
@@ -259,6 +298,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Hours elapsed in the window (default: the whole window).",
     )
     slo.set_defaults(func=cmd_slo)
+
+    comms = sub.add_parser(
+        "comms", help="Draft a customer-facing status page update."
+    )
+    comms.add_argument(
+        "--file",
+        default="",
+        help="JSON file with title, status, severity, affected, started, "
+        "resolved, updates (list of timestamp/status/message), next_update. "
+        "Without --file, prints an empty status-page template.",
+    )
+    comms.add_argument("--title", default=None, help="Incident title.")
+    comms.add_argument(
+        "--status",
+        default=None,
+        help="Current status: investigating, identified, monitoring, resolved.",
+    )
+    comms.add_argument(
+        "--severity", default=None, help="Severity, e.g. SEV-2."
+    )
+    comms.add_argument(
+        "--message",
+        default=None,
+        help="Append a status update with this message (only with --file).",
+    )
+    comms.add_argument(
+        "--now",
+        default=None,
+        help="Timestamp for the appended update (for testing).",
+    )
+    comms.add_argument(
+        "--next-update", default=None, dest="next_update", help="Next update ETA."
+    )
+    comms.set_defaults(func=cmd_comms)
 
     deploy = sub.add_parser(
         "deploy", help="Check the change-freeze gate before deploying."

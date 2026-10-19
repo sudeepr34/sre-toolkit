@@ -158,3 +158,42 @@ def test_deploy_command_rejects_bad_now(capsys):
     rc = main(["deploy", "--now", "not-a-date"])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_comms_command_prints_template(capsys):
+    rc = main(["comms", "--title", "checkout api errors", "--status", "identified"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "# checkout api errors" in out
+    assert "**identified**" in out
+    assert "No updates published yet" in out
+
+
+def test_comms_command_appends_message(tmp_path, capsys):
+    path = tmp_path / "status.json"
+    path.write_text(
+        json.dumps({"title": "db outage", "status": "investigating"})
+    )
+    rc = main(
+        [
+            "comms",
+            "--file",
+            str(path),
+            "--message",
+            "Rollback complete, monitoring.",
+            "--now",
+            "2026-10-19T10:30",
+        ]
+    )
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "### 2026-10-19T10:30 — investigating" in out
+    assert "Rollback complete, monitoring." in out
+
+
+def test_comms_command_rejects_bad_status_override(tmp_path, capsys):
+    path = tmp_path / "status.json"
+    path.write_text(json.dumps({"title": "db outage"}))
+    rc = main(["comms", "--file", str(path), "--status", "vibing"])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
