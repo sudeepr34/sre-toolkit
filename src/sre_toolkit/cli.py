@@ -15,6 +15,7 @@ from .postmortem import Postmortem, postmortem_from_dict
 from .runbook import db_failover_runbook
 from .slo import slo_assessment_from_dict
 from .deploy import deploy_gate_from_dict, parse_datetime
+from .escalate import escalation_book_from_dict
 
 
 def cmd_logs(args: argparse.Namespace) -> int:
@@ -123,6 +124,18 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_escalate(args: argparse.Namespace) -> int:
+    try:
+        with open(args.policy) as handle:
+            book = escalation_book_from_dict(json.load(handle))
+        state = book.resolve(args.severity, args.elapsed)
+    except (ValueError, KeyError, OSError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(state.to_markdown())
     return 0
 
 
@@ -350,6 +363,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Evaluate at this ISO datetime instead of now (for testing).",
     )
     deploy.set_defaults(func=cmd_deploy)
+
+    escalate = sub.add_parser(
+        "escalate", help="Resolve who to page from an escalation policy."
+    )
+    escalate.add_argument(
+        "policy",
+        help="JSON escalation book: {'policies': {'SEV-1': {'levels': "
+        "[{'wait_minutes': 5, 'targets': ['primary']}, ...]}}, 'default': 'SEV-2'}.",
+    )
+    escalate.add_argument(
+        "--severity",
+        default="",
+        help="Incident severity, e.g. SEV-1 (default: the book's default policy).",
+    )
+    escalate.add_argument(
+        "--elapsed",
+        type=int,
+        default=0,
+        help="Minutes since the incident started (default 0).",
+    )
+    escalate.set_defaults(func=cmd_escalate)
     return parser
 
 

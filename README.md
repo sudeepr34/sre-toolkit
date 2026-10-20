@@ -43,6 +43,9 @@ sre-toolkit deploy --freezes freezes.json --now 2026-10-19T12:00
 # Status-page draft: customer-facing incident updates in Markdown
 sre-toolkit comms --title "checkout api errors" --status identified --severity SEV-2
 sre-toolkit comms --file status.json --message "Rollback complete, monitoring." --now 2026-10-19T10:30
+
+# Escalation resolution: who to page now, given severity + elapsed incident time
+sre-toolkit escalate policy.json --severity SEV-1 --elapsed 12
 ```
 
 Example output:
@@ -70,6 +73,7 @@ top errors:
 - [x] SLO burn-rate and error-budget assessment (`slo` command)
 - [x] Change-freeze gate for deployments (`deploy` command)
 - [x] Status-page update drafter for incidents (`comms` command)
+- [x] Escalation policy resolution: who to page now (`escalate` command)
 
 ## Development
 

@@ -197,3 +197,54 @@ def test_comms_command_rejects_bad_status_override(tmp_path, capsys):
     rc = main(["comms", "--file", str(path), "--status", "vibing"])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+ESCALATE_BOOK = {
+    "policies": {
+        "SEV-1": {
+            "name": "sev1-core",
+            "levels": [
+                {"wait_minutes": 5, "targets": ["primary-oncall"]},
+                {"wait_minutes": 0, "targets": ["eng-manager"]},
+            ],
+        },
+        "SEV-2": {"levels": [{"wait_minutes": 30, "targets": ["primary-oncall"]}]},
+    },
+    "default": "SEV-2",
+}
+
+
+def _write_book(tmp_path):
+    path = tmp_path / "policy.json"
+    path.write_text(json.dumps(ESCALATE_BOOK))
+    return str(path)
+
+
+def test_escalate_command_resolves_current_level(tmp_path, capsys):
+    rc = main(
+        [
+            "escalate",
+            _write_book(tmp_path),
+            "--severity",
+            "SEV-1",
+            "--elapsed",
+            "12",
+        ]
+    )
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Current level: 2 of 2" in out
+    assert "Page now: eng-manager" in out
+
+
+def test_escalate_command_uses_default_policy(tmp_path, capsys):
+    rc = main(["escalate", _write_book(tmp_path), "--elapsed", "0"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Current level: 1 of 1" in out
+
+
+def test_escalate_command_rejects_missing_file(capsys):
+    rc = main(["escalate", "/nonexistent/policy.json"])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
