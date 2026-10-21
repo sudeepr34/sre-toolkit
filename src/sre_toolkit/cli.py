@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import date, datetime
 
 from .alert_noise import noise_report
 from .brief import brief_markdown
@@ -16,6 +16,7 @@ from .runbook import db_failover_runbook
 from .slo import slo_assessment_from_dict
 from .deploy import deploy_gate_from_dict, parse_datetime
 from .escalate import escalation_book_from_dict
+from .oncall import rotation_from_dict, parse_date
 
 
 def cmd_logs(args: argparse.Namespace) -> int:
@@ -124,6 +125,22 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_oncall(args: argparse.Namespace) -> int:
+    try:
+        with open(args.rota) as handle:
+            rota = rotation_from_dict(json.load(handle))
+        moment = parse_date(args.date) if args.date else date.today()
+    except (ValueError, KeyError, OSError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    try:
+        print(rota.to_markdown(moment))
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 
@@ -384,6 +401,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Minutes since the incident started (default 0).",
     )
     escalate.set_defaults(func=cmd_escalate)
+
+    oncall = sub.add_parser(
+        "oncall", help="Look up who's on call from a rotation."
+    )
+    oncall.add_argument(
+        "rota",
+        help="JSON rotation: {'name': 'backend', 'members': ['priya', ...], "
+        "'start_date': 'YYYY-MM-DD', 'shift_days': 7}.",
+    )
+    oncall.add_argument(
+        "--date",
+        default=None,
+        help="Look up this YYYY-MM-DD date instead of today.",
+    )
+    oncall.set_defaults(func=cmd_oncall)
     return parser
 
 

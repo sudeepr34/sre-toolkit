@@ -248,3 +248,30 @@ def test_escalate_command_rejects_missing_file(capsys):
     rc = main(["escalate", "/nonexistent/policy.json"])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_oncall_command_shows_who_is_on(tmp_path, capsys):
+    path = tmp_path / "rota.json"
+    path.write_text(
+        json.dumps(
+            {
+                "name": "backend",
+                "members": ["priya", "sudeep"],
+                "start_date": "2026-10-05",
+                "shift_days": 7,
+            }
+        )
+    )
+    rc = main(["oncall", str(path), "--date", "2026-10-14"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "On call now: **sudeep**" in out
+    assert "2026-10-19: priya" in out
+
+
+def test_oncall_command_rejects_bad_date(tmp_path, capsys):
+    path = tmp_path / "rota.json"
+    path.write_text(json.dumps({"members": ["solo"], "start_date": "2026-10-05"}))
+    rc = main(["oncall", str(path), "--date", "not-a-date"])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

@@ -46,6 +46,9 @@ sre-toolkit comms --file status.json --message "Rollback complete, monitoring." 
 
 # Escalation resolution: who to page now, given severity + elapsed incident time
 sre-toolkit escalate policy.json --severity SEV-1 --elapsed 12
+
+# On-call lookup: who's holding the pager, shift window, who's next
+sre-toolkit oncall rota.json --date 2026-10-21
 ```
 
 Example output:
@@ -74,6 +77,7 @@ top errors:
 - [x] Change-freeze gate for deployments (`deploy` command)
 - [x] Status-page update drafter for incidents (`comms` command)
 - [x] Escalation policy resolution: who to page now (`escalate` command)
+- [x] On-call rotation lookup: who's holding the pager (`oncall` command)
 
 ## Development
 
