@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from sre_toolkit.cli import main
 
 SAMPLE_ALERTS = [
@@ -275,3 +277,31 @@ def test_oncall_command_rejects_bad_date(tmp_path, capsys):
     rc = main(["oncall", str(path), "--date", "not-a-date"])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_review_command_rolls_up_postmortems(tmp_path, capsys):
+    incident = {
+        "title": "db outage",
+        "severity": "SEV-1",
+        "timeline": [
+            {"timestamp": "2026-10-20T09:00", "title": "a", "milestone": "detected"},
+            {"timestamp": "2026-10-20T09:30", "title": "b", "milestone": "mitigated"},
+        ],
+        "contributing_factors": ["bad deploy"],
+        "action_items": [{"task": "add canary", "owner": "sudeep"}],
+    }
+    path = tmp_path / "incident.json"
+    path.write_text(json.dumps(incident))
+    rc = main(["review", "--week", "2026-W42", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "# Ops review: 2026-W42" in out
+    assert "Incidents reviewed: 1" in out
+    assert "Mean time to mitigate: 30m" in out
+    assert "add canary" in out
+
+
+def test_review_command_rejects_zero_files(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        main(["review", "--week", "2026-W42"])
+    assert exc_info.value.code == 2

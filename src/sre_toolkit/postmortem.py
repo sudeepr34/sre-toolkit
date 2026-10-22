@@ -30,6 +30,11 @@ def _parse_ts(ts: str) -> datetime | None:
 
 
 def _fmt_duration(seconds: float) -> str:
+    return format_duration(seconds)
+
+
+def format_duration(seconds: float) -> str:
+    """Format a duration in seconds as a compact human string (5m, 1h 30m)."""
     total = int(seconds)
     if total < 60:
         return f"{total}s"
@@ -97,22 +102,34 @@ class Postmortem:
         return None
 
     @property
-    def time_to_mitigate(self) -> str | None:
-        """Detected -> mitigated span, or None when milestones are missing."""
+    def time_to_mitigate_seconds(self) -> float | None:
+        """Detected -> mitigated span in seconds, None when milestones missing."""
         detected = self._milestone_ts("detected")
         mitigated = self._milestone_ts("mitigated")
         if detected is None or mitigated is None:
             return None
-        return _fmt_duration((mitigated - detected).total_seconds())
+        return (mitigated - detected).total_seconds()
 
     @property
-    def time_to_resolve(self) -> str | None:
-        """Detected -> resolved span, or None when milestones are missing."""
+    def time_to_mitigate(self) -> str | None:
+        """Detected -> mitigated span, or None when milestones are missing."""
+        seconds = self.time_to_mitigate_seconds
+        return _fmt_duration(seconds) if seconds is not None else None
+
+    @property
+    def time_to_resolve_seconds(self) -> float | None:
+        """Detected -> resolved span in seconds, None when milestones missing."""
         detected = self._milestone_ts("detected")
         resolved = self._milestone_ts("resolved")
         if detected is None or resolved is None:
             return None
-        return _fmt_duration((resolved - detected).total_seconds())
+        return (resolved - detected).total_seconds()
+
+    @property
+    def time_to_resolve(self) -> str | None:
+        """Detected -> resolved span, or None when milestones are missing."""
+        seconds = self.time_to_resolve_seconds
+        return _fmt_duration(seconds) if seconds is not None else None
 
     @property
     def open_action_items(self) -> int:

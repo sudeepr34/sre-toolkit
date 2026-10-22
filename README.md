@@ -49,6 +49,9 @@ sre-toolkit escalate policy.json --severity SEV-1 --elapsed 12
 
 # On-call lookup: who's holding the pager, shift window, who's next
 sre-toolkit oncall rota.json --date 2026-10-21
+
+# Weekly ops review: roll up postmortem JSON files into a review summary
+sre-toolkit review --week 2026-W42 incident1.json incident2.json
 ```
 
 Example output:
@@ -78,6 +81,7 @@ top errors:
 - [x] Status-page update drafter for incidents (`comms` command)
 - [x] Escalation policy resolution: who to page now (`escalate` command)
 - [x] On-call rotation lookup: who's holding the pager (`oncall` command)
+- [x] Weekly ops review rollup from postmortems (`review` command)
 
 ## Development
 

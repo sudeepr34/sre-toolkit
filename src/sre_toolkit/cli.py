@@ -17,6 +17,7 @@ from .slo import slo_assessment_from_dict
 from .deploy import deploy_gate_from_dict, parse_datetime
 from .escalate import escalation_book_from_dict
 from .oncall import rotation_from_dict, parse_date
+from .review import weekly_review_from_postmortems
 
 
 def cmd_logs(args: argparse.Namespace) -> int:
@@ -125,6 +126,20 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_review(args: argparse.Namespace) -> int:
+    postmortems = []
+    for path in args.files:
+        try:
+            with open(path) as handle:
+                postmortems.append(postmortem_from_dict(json.load(handle)))
+        except (ValueError, KeyError, OSError) as exc:
+            print(f"error: {path}: {exc}", file=sys.stderr)
+            return 2
+    review = weekly_review_from_postmortems(postmortems, week=args.week or "")
+    print(review.to_markdown())
     return 0
 
 
@@ -416,6 +431,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Look up this YYYY-MM-DD date instead of today.",
     )
     oncall.set_defaults(func=cmd_oncall)
+
+    review = sub.add_parser(
+        "review", help="Roll up postmortems into a weekly ops review."
+    )
+    review.add_argument(
+        "files",
+        nargs="+",
+        help="Postmortem JSON files (as written for the postmortem command).",
+    )
+    review.add_argument(
+        "--week", default=None, help="Week label, e.g. 2026-W42."
+    )
+    review.set_defaults(func=cmd_review)
     return parser
 
 
