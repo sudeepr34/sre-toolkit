@@ -5,6 +5,7 @@ import argparse
 import json
 import sys
 from datetime import date, datetime
+from pathlib import Path
 
 from .alert_noise import noise_report
 from .brief import brief_markdown
@@ -16,6 +17,7 @@ from .runbook import db_failover_runbook
 from .slo import slo_assessment_from_dict
 from .deploy import deploy_gate_from_dict, parse_datetime
 from .escalate import escalation_book_from_dict
+from .incident import IncidentStore
 from .oncall import rotation_from_dict, parse_date
 from .review import weekly_review_from_postmortems
 
@@ -126,6 +128,81 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def _incident_store(args: argparse.Namespace) -> IncidentStore:
+    return IncidentStore(args.state)
+
+
+def cmd_incident_start(args: argparse.Namespace) -> int:
+    store = _incident_store(args)
+    incident = store.start(
+        args.title, severity=args.severity, started=args.started or ""
+    )
+    print(incident.to_markdown())
+    return 0
+
+
+def cmd_incident_status(args: argparse.Namespace) -> int:
+    store = _incident_store(args)
+    try:
+        incident = store.get(args.id)
+        now = parse_datetime(args.now) if args.now else None
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(incident.to_markdown(now))
+    return 0
+
+
+def cmd_incident_note(args: argparse.Namespace) -> int:
+    store = _incident_store(args)
+    try:
+        incident = store.get(args.id)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    incident.add_note(args.message, timestamp=args.at or "")
+    store.save()
+    print(f"note added to {incident.id}")
+    return 0
+
+
+def cmd_incident_list(args: argparse.Namespace) -> int:
+    store = _incident_store(args)
+    open_incidents = store.list_open()
+    if not open_incidents:
+        print("no open incidents")
+        return 0
+    for incident in open_incidents:
+        print(f"{incident.id} [{incident.status}] {incident.title} ({incident.severity})")
+    return 0
+
+
+def cmd_incident_resolve(args: argparse.Namespace) -> int:
+    store = _incident_store(args)
+    try:
+        incident = store.get(args.id)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    incident.resolve(timestamp=args.at or "")
+    store.save()
+    print(incident.to_markdown())
+    return 0
+
+
+def cmd_incident_set_status(args: argparse.Namespace) -> int:
+    store = _incident_store(args)
+    try:
+        incident = store.get(args.id)
+        incident.set_status(args.status)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    store.save()
+    print(incident.to_markdown())
     return 0
 
 
@@ -444,6 +521,48 @@ def build_parser() -> argparse.ArgumentParser:
         "--week", default=None, help="Week label, e.g. 2026-W42."
     )
     review.set_defaults(func=cmd_review)
+
+    incident = sub.add_parser("incident", help="Track live incidents.")
+    incident.add_argument(
+        "--state",
+        default=str(Path.home() / ".sre-toolkit-incidents.json"),
+        help="JSON state file for incidents (default ~/.sre-toolkit-incidents.json).",
+    )
+    inc_sub = incident.add_subparsers(dest="incident_command", required=True)
+
+    inc_start = inc_sub.add_parser("start", help="Start tracking an incident.")
+    inc_start.add_argument("--title", required=True, help="Incident title.")
+    inc_start.add_argument("--severity", default="SEV-3", help="e.g. SEV-2.")
+    inc_start.add_argument("--started", default="", help="ISO start time (for testing).")
+    inc_start.set_defaults(func=cmd_incident_start)
+
+    inc_status = inc_sub.add_parser("status", help="Show an incident with elapsed time.")
+    inc_status.add_argument("id", help="Incident id, e.g. INC-0001.")
+    inc_status.add_argument("--now", default=None, help="ISO time for elapsed (testing).")
+    inc_status.set_defaults(func=cmd_incident_status)
+
+    inc_note = inc_sub.add_parser("note", help="Append a timeline note.")
+    inc_note.add_argument("id", help="Incident id.")
+    inc_note.add_argument("--message", required=True, help="Note text.")
+    inc_note.add_argument("--at", default="", help="ISO timestamp (for testing).")
+    inc_note.set_defaults(func=cmd_incident_note)
+
+    inc_list = inc_sub.add_parser("list", help="List open incidents.")
+    inc_list.set_defaults(func=cmd_incident_list)
+
+    inc_resolve = inc_sub.add_parser("resolve", help="Resolve an incident.")
+    inc_resolve.add_argument("id", help="Incident id.")
+    inc_resolve.add_argument("--at", default="", help="ISO timestamp (for testing).")
+    inc_resolve.set_defaults(func=cmd_incident_resolve)
+
+    inc_set = inc_sub.add_parser("set-status", help="Change incident status.")
+    inc_set.add_argument("id", help="Incident id.")
+    inc_set.add_argument(
+        "--status",
+        required=True,
+        help="open, acknowledged, mitigating, resolved.",
+    )
+    inc_set.set_defaults(func=cmd_incident_set_status)
     return parser
 
 

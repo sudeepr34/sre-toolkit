@@ -52,6 +52,12 @@ sre-toolkit oncall rota.json --date 2026-10-21
 
 # Weekly ops review: roll up postmortem JSON files into a review summary
 sre-toolkit review --week 2026-W42 incident1.json incident2.json
+
+# Live incident tracking: start, status, notes, list, resolve
+sre-toolkit incident start --title "db outage" --severity SEV-1
+sre-toolkit incident status INC-0001
+sre-toolkit incident note INC-0001 --message "Rollback started."
+sre-toolkit incident resolve INC-0001
 ```
 
 Example output:
@@ -82,6 +88,7 @@ top errors:
 - [x] Escalation policy resolution: who to page now (`escalate` command)
 - [x] On-call rotation lookup: who's holding the pager (`oncall` command)
 - [x] Weekly ops review rollup from postmortems (`review` command)
+- [x] Live incident tracking: start/status/note/list/resolve (`incident` command)
 
 ## Development
 

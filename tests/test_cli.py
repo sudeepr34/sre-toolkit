@@ -305,3 +305,63 @@ def test_review_command_rejects_zero_files(capsys):
     with pytest.raises(SystemExit) as exc_info:
         main(["review", "--week", "2026-W42"])
     assert exc_info.value.code == 2
+
+
+def _incident_args(tmp_path, *rest):
+    return ["incident", "--state", str(tmp_path / "incidents.json"), *rest]
+
+
+def test_incident_start_and_status(tmp_path, capsys):
+    rc = main(
+        _incident_args(tmp_path, "start", "--title", "db outage", "--severity", "SEV-1",
+           "--started", "2026-10-23T09:00")
+    )
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "# Incident INC-0001: db outage" in out
+
+    rc = main(
+        _incident_args(tmp_path, "status", "INC-0001", "--now", "2026-10-23T09:45")
+    )
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Elapsed: 45m" in out
+
+
+def test_incident_note_list_resolve(tmp_path, capsys):
+    main(_incident_args(tmp_path, "start", "--title", "x"))
+    rc = main(
+        _incident_args(tmp_path, "note", "INC-0001", "--message", "looking",
+           "--at", "2026-10-23T09:10")
+    )
+    assert rc == 0
+    assert "note added to INC-0001" in capsys.readouterr().out
+
+    rc = main(_incident_args(tmp_path, "list"))
+    assert rc == 0
+    assert "INC-0001 [open] x (SEV-3)" in capsys.readouterr().out
+
+    rc = main(
+        _incident_args(tmp_path, "resolve", "INC-0001", "--at", "2026-10-23T10:00")
+    )
+    assert rc == 0
+    assert "**resolved**" in capsys.readouterr().out
+
+    rc = main(_incident_args(tmp_path, "list"))
+    assert rc == 0
+    assert "no open incidents" in capsys.readouterr().out
+
+
+def test_incident_set_status(tmp_path, capsys):
+    main(_incident_args(tmp_path, "start", "--title", "x"))
+    rc = main(
+        _incident_args(tmp_path, "set-status", "INC-0001", "--status", "acknowledged")
+    )
+    assert rc == 0
+    assert "**acknowledged**" in capsys.readouterr().out
+
+
+def test_incident_unknown_id_errors(tmp_path, capsys):
+    rc = main(_incident_args(tmp_path, "status", "INC-9999"))
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
