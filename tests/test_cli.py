@@ -365,3 +365,25 @@ def test_incident_unknown_id_errors(tmp_path, capsys):
     rc = main(_incident_args(tmp_path, "status", "INC-9999"))
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_capacity_forecast(tmp_path, capsys):
+    rc = main([
+        "capacity", "forecast",
+        "--current-load", "600", "--capacity", "1000",
+        "--growth", "0.10", "--periods", "3",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "| 2 | 726.0 rps | 72.6% | breach |" in out
+    assert "crosses target at period 2" in out
+
+
+def test_capacity_invalid_target_errors(tmp_path, capsys):
+    rc = main([
+        "capacity", "forecast",
+        "--current-load", "600", "--capacity", "1000",
+        "--growth", "0.10", "--target", "1.5",
+    ])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

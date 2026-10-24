@@ -58,6 +58,9 @@ sre-toolkit incident start --title "db outage" --severity SEV-1
 sre-toolkit incident status INC-0001
 sre-toolkit incident note INC-0001 --message "Rollback started."
 sre-toolkit incident resolve INC-0001
+
+# Capacity planning: project growth against capacity, find the breach period
+sre-toolkit capacity forecast --current-load 600 --capacity 1000 --growth 0.10
 ```
 
 Example output:
@@ -89,6 +92,7 @@ top errors:
 - [x] On-call rotation lookup: who's holding the pager (`oncall` command)
 - [x] Weekly ops review rollup from postmortems (`review` command)
 - [x] Live incident tracking: start/status/note/list/resolve (`incident` command)
+- [x] Capacity planning: growth projection + scale timing (`capacity` command)
 
 ## Development
 

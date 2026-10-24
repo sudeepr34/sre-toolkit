@@ -17,6 +17,7 @@ from .runbook import db_failover_runbook
 from .slo import slo_assessment_from_dict
 from .deploy import deploy_gate_from_dict, parse_datetime
 from .escalate import escalation_book_from_dict
+from .capacity import CapacityPlan
 from .incident import IncidentStore
 from .oncall import rotation_from_dict, parse_date
 from .review import weekly_review_from_postmortems
@@ -128,6 +129,23 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_capacity(args: argparse.Namespace) -> int:
+    try:
+        plan = CapacityPlan(
+            current_load=args.current_load,
+            capacity=args.capacity,
+            growth_rate=args.growth,
+            target_utilization=args.target,
+            periods=args.periods,
+            unit=args.unit,
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(plan.to_markdown())
     return 0
 
 
@@ -563,6 +581,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="open, acknowledged, mitigating, resolved.",
     )
     inc_set.set_defaults(func=cmd_incident_set_status)
+
+    capacity = sub.add_parser(
+        "capacity", help="Project load growth against capacity."
+    )
+    cap_forecast = capacity.add_subparsers(dest="capacity_command", required=True)
+    cap_f = cap_forecast.add_parser(
+        "forecast", help="Print the utilization forecast table."
+    )
+    cap_f.add_argument("--current-load", type=float, required=True, help="Load now.")
+    cap_f.add_argument("--capacity", type=float, required=True, help="Capacity now.")
+    cap_f.add_argument(
+        "--growth", type=float, required=True,
+        help="Growth per period as a fraction, e.g. 0.05 for 5%.",
+    )
+    cap_f.add_argument(
+        "--target", type=float, default=0.70,
+        help="Target utilization ceiling (default 0.70).",
+    )
+    cap_f.add_argument(
+        "--periods", type=int, default=12, help="Periods to project (default 12).",
+    )
+    cap_f.add_argument("--unit", default="rps", help="Load unit label (default rps).")
+    cap_f.set_defaults(func=cmd_capacity)
     return parser
 
 
