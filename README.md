@@ -61,6 +61,11 @@ sre-toolkit incident resolve INC-0001
 
 # Capacity planning: project growth against capacity, find the breach period
 sre-toolkit capacity forecast --current-load 600 --capacity 1000 --growth 0.10
+
+# Game-day drills: scenario plans and run sheets
+sre-toolkit drill list
+sre-toolkit drill show db-failover
+sre-toolkit drill run db-failover
 ```
 
 Example output:
@@ -93,6 +98,7 @@ top errors:
 - [x] Weekly ops review rollup from postmortems (`review` command)
 - [x] Live incident tracking: start/status/note/list/resolve (`incident` command)
 - [x] Capacity planning: growth projection + scale timing (`capacity` command)
+- [x] Game-day drills: scenario library + run sheets (`drill` command)
 
 ## Development
 

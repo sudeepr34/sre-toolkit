@@ -387,3 +387,34 @@ def test_capacity_invalid_target_errors(tmp_path, capsys):
     ])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_drill_list(tmp_path, capsys):
+    rc = main(["drill", "list"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "db-failover - Primary database failover" in out
+    assert "bad-deploy - Bad deploy rollback" in out
+
+
+def test_drill_show(tmp_path, capsys):
+    rc = main(["drill", "show", "cache-outage"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "# Drill: Cache layer outage" in out
+    assert "## Success criteria" in out
+
+
+def test_drill_run(tmp_path, capsys):
+    rc = main(["drill", "run", "disk-full", "--date", "2026-10-25"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "# Drill run: Disk pressure on a node" in out
+    assert "Date: 2026-10-25" in out
+    assert "- [ ] [on-call]" in out
+
+
+def test_drill_unknown_id_errors(tmp_path, capsys):
+    rc = main(["drill", "show", "meteor-strike"])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

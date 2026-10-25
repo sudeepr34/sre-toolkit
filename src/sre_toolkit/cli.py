@@ -18,6 +18,7 @@ from .slo import slo_assessment_from_dict
 from .deploy import deploy_gate_from_dict, parse_datetime
 from .escalate import escalation_book_from_dict
 from .capacity import CapacityPlan
+from .drill import get_scenario, list_scenarios
 from .incident import IncidentStore
 from .oncall import rotation_from_dict, parse_date
 from .review import weekly_review_from_postmortems
@@ -129,6 +130,35 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_drill_list(args: argparse.Namespace) -> int:
+    for scenario in list_scenarios():
+        print(
+            f"{scenario.id} - {scenario.title} "
+            f"({scenario.duration_minutes} min, {scenario.blast_radius})"
+        )
+    return 0
+
+
+def cmd_drill_show(args: argparse.Namespace) -> int:
+    try:
+        scenario = get_scenario(args.id)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(scenario.to_markdown())
+    return 0
+
+
+def cmd_drill_run(args: argparse.Namespace) -> int:
+    try:
+        scenario = get_scenario(args.id)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(scenario.run_sheet(run_date=args.date or ""))
     return 0
 
 
@@ -604,6 +634,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     cap_f.add_argument("--unit", default="rps", help="Load unit label (default rps).")
     cap_f.set_defaults(func=cmd_capacity)
+
+    drill = sub.add_parser("drill", help="Game-day exercise plans.")
+    drill_sub = drill.add_subparsers(dest="drill_command", required=True)
+
+    drill_list = drill_sub.add_parser("list", help="List available scenarios.")
+    drill_list.set_defaults(func=cmd_drill_list)
+
+    drill_show = drill_sub.add_parser("show", help="Show a scenario's plan.")
+    drill_show.add_argument("id", help="Scenario id, e.g. db-failover.")
+    drill_show.set_defaults(func=cmd_drill_show)
+
+    drill_run = drill_sub.add_parser("run", help="Print a dated run sheet.")
+    drill_run.add_argument("id", help="Scenario id.")
+    drill_run.add_argument("--date", default="", help="Run date (default today).")
+    drill_run.set_defaults(func=cmd_drill_run)
     return parser
 
 
