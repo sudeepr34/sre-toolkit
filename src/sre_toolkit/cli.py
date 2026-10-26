@@ -17,6 +17,7 @@ from .runbook import db_failover_runbook
 from .slo import slo_assessment_from_dict
 from .deploy import deploy_gate_from_dict, parse_datetime
 from .escalate import escalation_book_from_dict
+from .backup import check_backups, records_from_json, to_markdown
 from .capacity import CapacityPlan
 from .drill import get_scenario, list_scenarios
 from .incident import IncidentStore
@@ -130,6 +131,22 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_backup_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.backups) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.backups}: {exc}", file=sys.stderr)
+        return 2
+    now = parse_datetime(args.now) if args.now else None
+    results = check_backups(
+        records_from_json(data), now=now,
+        restore_max_days=args.restore_max_days,
+    )
+    print(to_markdown(results))
     return 0
 
 
@@ -649,6 +666,23 @@ def build_parser() -> argparse.ArgumentParser:
     drill_run.add_argument("id", help="Scenario id.")
     drill_run.add_argument("--date", default="", help="Run date (default today).")
     drill_run.set_defaults(func=cmd_drill_run)
+
+    backup = sub.add_parser("backup", help="Verify backup freshness.")
+    backup_sub = backup.add_subparsers(dest="backup_command", required=True)
+
+    backup_check = backup_sub.add_parser(
+        "check", help="Check backups in a JSON file against cadence."
+    )
+    backup_check.add_argument(
+        "--backups", required=True,
+        help="JSON file: list of {service, last_backup, cadence_hours, last_restore_test}.",
+    )
+    backup_check.add_argument("--now", default=None, help="ISO time for ages (testing).")
+    backup_check.add_argument(
+        "--restore-max-days", type=int, default=30,
+        help="Max days since a restore test (default 30).",
+    )
+    backup_check.set_defaults(func=cmd_backup_check)
     return parser
 
 

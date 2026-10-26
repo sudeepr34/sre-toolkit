@@ -66,6 +66,9 @@ sre-toolkit capacity forecast --current-load 600 --capacity 1000 --growth 0.10
 sre-toolkit drill list
 sre-toolkit drill show db-failover
 sre-toolkit drill run db-failover
+
+# Backup verification: stale backups and untested restores
+sre-toolkit backup check --backups backups.json
 ```
 
 Example output:
@@ -99,6 +102,7 @@ top errors:
 - [x] Live incident tracking: start/status/note/list/resolve (`incident` command)
 - [x] Capacity planning: growth projection + scale timing (`capacity` command)
 - [x] Game-day drills: scenario library + run sheets (`drill` command)
+- [x] Backup verification: stale backups + restore-test staleness (`backup` command)
 
 ## Development
 

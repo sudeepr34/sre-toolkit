@@ -418,3 +418,29 @@ def test_drill_unknown_id_errors(tmp_path, capsys):
     rc = main(["drill", "show", "meteor-strike"])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_backup_check(tmp_path, capsys):
+    import json as _json
+    data = [
+        {"service": "api-db", "last_backup": "2026-10-26T10:00",
+         "cadence_hours": 24, "last_restore_test": "2026-10-20"},
+        {"service": "cache", "last_backup": "", "cadence_hours": 24,
+         "last_restore_test": ""},
+    ]
+    path = tmp_path / "backups.json"
+    path.write_text(_json.dumps(data))
+    rc = main([
+        "backup", "check", "--backups", str(path), "--now", "2026-10-26T12:00",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "| api-db | ok |" in out
+    assert "| cache | never |" in out
+    assert "## Needs attention" in out
+
+
+def test_backup_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["backup", "check", "--backups", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
