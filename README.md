@@ -69,6 +69,9 @@ sre-toolkit drill run db-failover
 
 # Backup verification: stale backups and untested restores
 sre-toolkit backup check --backups backups.json
+
+# Cost attribution: top spenders, month-over-month, over-budget alerts
+sre-toolkit cost report --costs costs.json --budgets budgets.json --month 2026-10 --prev-month 2026-09
 ```
 
 Example output:
@@ -103,6 +106,7 @@ top errors:
 - [x] Capacity planning: growth projection + scale timing (`capacity` command)
 - [x] Game-day drills: scenario library + run sheets (`drill` command)
 - [x] Backup verification: stale backups + restore-test staleness (`backup` command)
+- [x] Cost attribution: top spenders, MoM change, over-budget alerts (`cost` command)
 
 ## Development
 

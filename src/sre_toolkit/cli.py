@@ -18,6 +18,10 @@ from .slo import slo_assessment_from_dict
 from .deploy import deploy_gate_from_dict, parse_datetime
 from .escalate import escalation_book_from_dict
 from .backup import check_backups, records_from_json, to_markdown
+from .cost import (
+    records_from_json as cost_records_from_json,
+    to_markdown as cost_to_markdown,
+)
 from .capacity import CapacityPlan
 from .drill import get_scenario, list_scenarios
 from .incident import IncidentStore
@@ -131,6 +135,33 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_cost_report(args: argparse.Namespace) -> int:
+    try:
+        with open(args.costs) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.costs}: {exc}", file=sys.stderr)
+        return 2
+    budgets = None
+    if args.budgets:
+        try:
+            with open(args.budgets) as handle:
+                budgets = json.load(handle)
+        except (OSError, ValueError) as exc:
+            print(f"error: cannot read {args.budgets}: {exc}", file=sys.stderr)
+            return 2
+    print(
+        cost_to_markdown(
+            cost_records_from_json(data),
+            budgets=budgets,
+            month=args.month or "",
+            prev_month=args.prev_month or "",
+            top_n=args.top,
+        )
+    )
     return 0
 
 
@@ -683,6 +714,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Max days since a restore test (default 30).",
     )
     backup_check.set_defaults(func=cmd_backup_check)
+
+    cost = sub.add_parser("cost", help="Attribute spend by service.")
+    cost_sub = cost.add_subparsers(dest="cost_command", required=True)
+
+    cost_report = cost_sub.add_parser(
+        "report", help="Report spend from a JSON file."
+    )
+    cost_report.add_argument(
+        "--costs", required=True,
+        help="JSON file: list of {service, amount, month}.",
+    )
+    cost_report.add_argument(
+        "--budgets", default=None,
+        help="JSON file: {service: budget} mapping.",
+    )
+    cost_report.add_argument("--month", default=None, help="Month for MoM, e.g. 2026-10.")
+    cost_report.add_argument("--prev-month", default=None, help="Previous month, e.g. 2026-09.")
+    cost_report.add_argument("--top", type=int, default=5, help="Top spenders to show.")
+    cost_report.set_defaults(func=cmd_cost_report)
     return parser
 
 

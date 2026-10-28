@@ -444,3 +444,30 @@ def test_backup_check_missing_file_errors(tmp_path, capsys):
     rc = main(["backup", "check", "--backups", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_cost_report(tmp_path, capsys):
+    import json as _json
+    costs = tmp_path / "costs.json"
+    costs.write_text(_json.dumps([
+        {"service": "api", "amount": 400, "month": "2026-10"},
+        {"service": "db", "amount": 300, "month": "2026-10"},
+        {"service": "api", "amount": 100, "month": "2026-09"},
+    ]))
+    budgets = tmp_path / "budgets.json"
+    budgets.write_text(_json.dumps({"api": 450}))
+    rc = main([
+        "cost", "report", "--costs", str(costs), "--budgets", str(budgets),
+        "--month", "2026-10", "--prev-month", "2026-09",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Total spend: 800.00" in out
+    assert "| api | 500.00 | 62.5% |" in out
+    assert "## Over budget" in out
+
+
+def test_cost_report_missing_file_errors(tmp_path, capsys):
+    rc = main(["cost", "report", "--costs", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
