@@ -471,3 +471,26 @@ def test_cost_report_missing_file_errors(tmp_path, capsys):
     rc = main(["cost", "report", "--costs", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_toil_report(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "toil.json"
+    path.write_text(_json.dumps([
+        {"task": "restart pods", "minutes": 180, "category": "manual"},
+        {"task": "rotate certs", "minutes": 300, "category": "automatable"},
+    ]))
+    rc = main([
+        "toil", "report", "--toil", str(path), "--capacity-minutes", "960",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Total toil: 480 minutes (8.0 hours)" in out
+    assert "Share of capacity: 50.0%" in out
+    assert "- rotate certs: 300 minutes" in out
+
+
+def test_toil_report_missing_file_errors(tmp_path, capsys):
+    rc = main(["toil", "report", "--toil", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

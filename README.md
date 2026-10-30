@@ -72,6 +72,9 @@ sre-toolkit backup check --backups backups.json
 
 # Cost attribution: top spenders, month-over-month, over-budget alerts
 sre-toolkit cost report --costs costs.json --budgets budgets.json --month 2026-10 --prev-month 2026-09
+
+# Toil tracking: where the time goes, share of capacity, automation candidates
+sre-toolkit toil report --toil toil.json --capacity-minutes 9600
 ```
 
 Example output:
@@ -107,6 +110,7 @@ top errors:
 - [x] Game-day drills: scenario library + run sheets (`drill` command)
 - [x] Backup verification: stale backups + restore-test staleness (`backup` command)
 - [x] Cost attribution: top spenders, MoM change, over-budget alerts (`cost` command)
+- [x] Toil tracking: time by task/category, share of capacity, automation candidates (`toil` command)
 
 ## Development
 

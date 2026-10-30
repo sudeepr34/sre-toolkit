@@ -22,6 +22,8 @@ from .cost import (
     records_from_json as cost_records_from_json,
     to_markdown as cost_to_markdown,
 )
+from .toil import entries_from_json as toil_entries_from_json
+from .toil import to_markdown as toil_to_markdown
 from .capacity import CapacityPlan
 from .drill import get_scenario, list_scenarios
 from .incident import IncidentStore
@@ -135,6 +137,23 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_toil_report(args: argparse.Namespace) -> int:
+    try:
+        with open(args.toil) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.toil}: {exc}", file=sys.stderr)
+        return 2
+    print(
+        toil_to_markdown(
+            toil_entries_from_json(data),
+            capacity_minutes=args.capacity_minutes,
+            min_minutes=args.threshold,
+        )
+    )
     return 0
 
 
@@ -733,6 +752,26 @@ def build_parser() -> argparse.ArgumentParser:
     cost_report.add_argument("--prev-month", default=None, help="Previous month, e.g. 2026-09.")
     cost_report.add_argument("--top", type=int, default=5, help="Top spenders to show.")
     cost_report.set_defaults(func=cmd_cost_report)
+
+    toil = sub.add_parser("toil", help="Track toil and automation candidates.")
+    toil_sub = toil.add_subparsers(dest="toil_command", required=True)
+
+    toil_report = toil_sub.add_parser(
+        "report", help="Report toil from a JSON file."
+    )
+    toil_report.add_argument(
+        "--toil", required=True,
+        help="JSON file: list of {task, minutes, category, date}.",
+    )
+    toil_report.add_argument(
+        "--capacity-minutes", type=float, default=0.0,
+        help="Available team minutes for the toil-share calculation.",
+    )
+    toil_report.add_argument(
+        "--threshold", type=float, default=120.0,
+        help="Min minutes for an automation candidate (default 120).",
+    )
+    toil_report.set_defaults(func=cmd_toil_report)
     return parser
 
 
