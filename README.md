@@ -75,6 +75,9 @@ sre-toolkit cost report --costs costs.json --budgets budgets.json --month 2026-1
 
 # Toil tracking: where the time goes, share of capacity, automation candidates
 sre-toolkit toil report --toil toil.json --capacity-minutes 9600
+
+# Dependency graph: blast radius and cycle detection
+sre-toolkit deps report --graph graph.json --service db
 ```
 
 Example output:
@@ -111,6 +114,7 @@ top errors:
 - [x] Backup verification: stale backups + restore-test staleness (`backup` command)
 - [x] Cost attribution: top spenders, MoM change, over-budget alerts (`cost` command)
 - [x] Toil tracking: time by task/category, share of capacity, automation candidates (`toil` command)
+- [x] Dependency graph: blast radius + cycle detection (`deps` command)
 
 ## Development
 

@@ -494,3 +494,42 @@ def test_toil_report_missing_file_errors(tmp_path, capsys):
     rc = main(["toil", "report", "--toil", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_deps_report_service(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "graph.json"
+    path.write_text(_json.dumps({
+        "api": ["db", "cache"], "web": ["api"], "db": [], "cache": ["db"],
+    }))
+    rc = main(["deps", "report", "--graph", str(path), "--service", "db"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "# Dependency report: db" in out
+    assert "## Blast radius (3 services)" in out
+
+
+def test_deps_report_full(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "graph.json"
+    path.write_text(_json.dumps({"api": ["db"], "db": []}))
+    rc = main(["deps", "report", "--graph", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "| db | 0 | 1 | 1 |" in out
+    assert "No dependency cycles." in out
+
+
+def test_deps_report_unknown_service_errors(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "graph.json"
+    path.write_text(_json.dumps({"api": ["db"], "db": []}))
+    rc = main(["deps", "report", "--graph", str(path), "--service", "nope"])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
+
+
+def test_deps_report_missing_file_errors(tmp_path, capsys):
+    rc = main(["deps", "report", "--graph", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

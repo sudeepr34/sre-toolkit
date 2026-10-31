@@ -22,6 +22,7 @@ from .cost import (
     records_from_json as cost_records_from_json,
     to_markdown as cost_to_markdown,
 )
+from .dependency import graph_from_json
 from .toil import entries_from_json as toil_entries_from_json
 from .toil import to_markdown as toil_to_markdown
 from .capacity import CapacityPlan
@@ -137,6 +138,25 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_deps_report(args: argparse.Namespace) -> int:
+    try:
+        with open(args.graph) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.graph}: {exc}", file=sys.stderr)
+        return 2
+    graph = graph_from_json(data)
+    try:
+        if args.service:
+            print(graph.service_markdown(args.service))
+        else:
+            print(graph.full_markdown())
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 
@@ -772,6 +792,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Min minutes for an automation candidate (default 120).",
     )
     toil_report.set_defaults(func=cmd_toil_report)
+
+    deps = sub.add_parser("deps", help="Analyze service dependencies.")
+    deps_sub = deps.add_subparsers(dest="deps_command", required=True)
+
+    deps_report = deps_sub.add_parser(
+        "report", help="Blast-radius report for a graph."
+    )
+    deps_report.add_argument(
+        "--graph", required=True,
+        help="JSON file: {service: [dependencies]}.",
+    )
+    deps_report.add_argument(
+        "--service", default=None,
+        help="Focus on one service; omit for the full graph report.",
+    )
+    deps_report.set_defaults(func=cmd_deps_report)
     return parser
 
 
