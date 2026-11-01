@@ -533,3 +533,34 @@ def test_deps_report_missing_file_errors(tmp_path, capsys):
     rc = main(["deps", "report", "--graph", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_monitor_lint_clean(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "rules.json"
+    path.write_text(_json.dumps([
+        {"name": "HighLatency", "severity": "critical",
+         "runbook": "https://runbooks/latency", "owner": "sre"},
+    ]))
+    rc = main(["monitor", "lint", "--rules", str(path)])
+    assert rc == 0
+    assert "All rules clean" in capsys.readouterr().out
+
+
+def test_monitor_lint_issues_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "rules.json"
+    path.write_text(_json.dumps([
+        {"name": "HighLatency", "severity": "", "runbook": "", "owner": "sre"},
+    ]))
+    rc = main(["monitor", "lint", "--rules", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Issues found: 2" in out
+    assert "| HighLatency | severity | no severity set |" in out
+
+
+def test_monitor_lint_missing_file_errors(tmp_path, capsys):
+    rc = main(["monitor", "lint", "--rules", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

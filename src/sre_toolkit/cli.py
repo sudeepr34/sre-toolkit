@@ -23,6 +23,7 @@ from .cost import (
     to_markdown as cost_to_markdown,
 )
 from .dependency import graph_from_json
+from .monitor import lint_rules, rules_from_json, to_markdown as monitor_to_markdown
 from .toil import entries_from_json as toil_entries_from_json
 from .toil import to_markdown as toil_to_markdown
 from .capacity import CapacityPlan
@@ -139,6 +140,19 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_monitor_lint(args: argparse.Namespace) -> int:
+    try:
+        with open(args.rules) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.rules}: {exc}", file=sys.stderr)
+        return 2
+    rules = rules_from_json(data)
+    issues = lint_rules(rules)
+    print(monitor_to_markdown(rules, issues))
+    return 1 if issues else 0
 
 
 def cmd_deps_report(args: argparse.Namespace) -> int:
@@ -808,6 +822,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Focus on one service; omit for the full graph report.",
     )
     deps_report.set_defaults(func=cmd_deps_report)
+
+    monitor = sub.add_parser("monitor", help="Lint alert rules.")
+    monitor_sub = monitor.add_subparsers(dest="monitor_command", required=True)
+
+    monitor_lint = monitor_sub.add_parser(
+        "lint", help="Lint alert rules from a JSON file."
+    )
+    monitor_lint.add_argument(
+        "--rules", required=True,
+        help="JSON file: list of {name, severity, runbook, owner, enabled}.",
+    )
+    monitor_lint.set_defaults(func=cmd_monitor_lint)
     return parser
 
 

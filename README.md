@@ -78,6 +78,9 @@ sre-toolkit toil report --toil toil.json --capacity-minutes 9600
 
 # Dependency graph: blast radius and cycle detection
 sre-toolkit deps report --graph graph.json --service db
+
+# Alert rule lint: severity, runbook, owner, duplicates (exit 1 on issues)
+sre-toolkit monitor lint --rules rules.json
 ```
 
 Example output:
@@ -115,6 +118,7 @@ top errors:
 - [x] Cost attribution: top spenders, MoM change, over-budget alerts (`cost` command)
 - [x] Toil tracking: time by task/category, share of capacity, automation candidates (`toil` command)
 - [x] Dependency graph: blast radius + cycle detection (`deps` command)
+- [x] Alert rule lint: severity, runbook, owner, duplicates (`monitor` command)
 
 ## Development
 
