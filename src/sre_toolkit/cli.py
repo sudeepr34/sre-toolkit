@@ -22,6 +22,7 @@ from .cost import (
     records_from_json as cost_records_from_json,
     to_markdown as cost_to_markdown,
 )
+from .audit import diff_configs, to_markdown as audit_to_markdown
 from .dependency import graph_from_json
 from .monitor import lint_rules, rules_from_json, to_markdown as monitor_to_markdown
 from .toil import entries_from_json as toil_entries_from_json
@@ -140,6 +141,20 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_audit_diff(args: argparse.Namespace) -> int:
+    try:
+        with open(args.expected) as handle:
+            expected = json.load(handle)
+        with open(args.actual) as handle:
+            actual = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read configs: {exc}", file=sys.stderr)
+        return 2
+    drifts = diff_configs(expected, actual)
+    print(audit_to_markdown(drifts))
+    return 1 if drifts else 0
 
 
 def cmd_monitor_lint(args: argparse.Namespace) -> int:
@@ -834,6 +849,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {name, severity, runbook, owner, enabled}.",
     )
     monitor_lint.set_defaults(func=cmd_monitor_lint)
+
+    audit = sub.add_parser("audit", help="Detect config drift.")
+    audit_sub = audit.add_subparsers(dest="audit_command", required=True)
+
+    audit_diff = audit_sub.add_parser(
+        "diff", help="Diff expected vs actual config JSON files."
+    )
+    audit_diff.add_argument("--expected", required=True, help="Expected config JSON.")
+    audit_diff.add_argument("--actual", required=True, help="Actual config JSON.")
+    audit_diff.set_defaults(func=cmd_audit_diff)
     return parser
 
 

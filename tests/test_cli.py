@@ -564,3 +564,34 @@ def test_monitor_lint_missing_file_errors(tmp_path, capsys):
     rc = main(["monitor", "lint", "--rules", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_audit_diff_clean(tmp_path, capsys):
+    import json as _json
+    expected = tmp_path / "expected.json"
+    actual = tmp_path / "actual.json"
+    expected.write_text(_json.dumps({"replicas": 3}))
+    actual.write_text(_json.dumps({"replicas": 3}))
+    rc = main(["audit", "diff", "--expected", str(expected), "--actual", str(actual)])
+    assert rc == 0
+    assert "No drift" in capsys.readouterr().out
+
+
+def test_audit_diff_drift_exit_1(tmp_path, capsys):
+    import json as _json
+    expected = tmp_path / "expected.json"
+    actual = tmp_path / "actual.json"
+    expected.write_text(_json.dumps({"replicas": 3, "db": {"pool": 10}}))
+    actual.write_text(_json.dumps({"replicas": 2, "db": {"pool": 10}}))
+    rc = main(["audit", "diff", "--expected", str(expected), "--actual", str(actual)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Drifts found: 1" in out
+    assert "| replicas | changed | 3 | 2 |" in out
+
+
+def test_audit_diff_missing_file_errors(tmp_path, capsys):
+    rc = main(["audit", "diff", "--expected", str(tmp_path / "nope.json"),
+               "--actual", str(tmp_path / "nope2.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

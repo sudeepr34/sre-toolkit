@@ -81,6 +81,9 @@ sre-toolkit deps report --graph graph.json --service db
 
 # Alert rule lint: severity, runbook, owner, duplicates (exit 1 on issues)
 sre-toolkit monitor lint --rules rules.json
+
+# Config drift: expected vs actual, dotted paths (exit 1 on drift)
+sre-toolkit audit diff --expected expected.json --actual actual.json
 ```
 
 Example output:
@@ -119,6 +122,7 @@ top errors:
 - [x] Toil tracking: time by task/category, share of capacity, automation candidates (`toil` command)
 - [x] Dependency graph: blast radius + cycle detection (`deps` command)
 - [x] Alert rule lint: severity, runbook, owner, duplicates (`monitor` command)
+- [x] Config drift: changed/missing/extra keys with dotted paths (`audit` command)
 
 ## Development
 
