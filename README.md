@@ -84,6 +84,9 @@ sre-toolkit monitor lint --rules rules.json
 
 # Config drift: expected vs actual, dotted paths (exit 1 on drift)
 sre-toolkit audit diff --expected expected.json --actual actual.json
+
+# Retention policy: shortfalls and unconfigured retention (exit 1 on gaps)
+sre-toolkit retention check --retention retention.json
 ```
 
 Example output:
@@ -123,6 +126,7 @@ top errors:
 - [x] Dependency graph: blast radius + cycle detection (`deps` command)
 - [x] Alert rule lint: severity, runbook, owner, duplicates (`monitor` command)
 - [x] Config drift: changed/missing/extra keys with dotted paths (`audit` command)
+- [x] Retention policy: shortfalls + unconfigured retention (`retention` command)
 
 ## Development
 

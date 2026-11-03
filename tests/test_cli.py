@@ -595,3 +595,35 @@ def test_audit_diff_missing_file_errors(tmp_path, capsys):
                "--actual", str(tmp_path / "nope2.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_retention_check_clean(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "retention.json"
+    path.write_text(_json.dumps([
+        {"service": "api", "log_type": "access",
+         "retention_days": 90, "required_days": 30},
+    ]))
+    rc = main(["retention", "check", "--retention", str(path)])
+    assert rc == 0
+    assert "All retention meets policy." in capsys.readouterr().out
+
+
+def test_retention_check_gaps_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "retention.json"
+    path.write_text(_json.dumps([
+        {"service": "db", "log_type": "access",
+         "retention_days": 7, "required_days": 30},
+    ]))
+    rc = main(["retention", "check", "--retention", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "| db/access | shortfall |" in out
+    assert "## Gaps" in out
+
+
+def test_retention_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["retention", "check", "--retention", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

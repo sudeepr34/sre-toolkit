@@ -23,6 +23,11 @@ from .cost import (
     to_markdown as cost_to_markdown,
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
+from .retention import (
+    check_retention,
+    records_from_json as retention_records_from_json,
+    to_markdown as retention_to_markdown,
+)
 from .dependency import graph_from_json
 from .monitor import lint_rules, rules_from_json, to_markdown as monitor_to_markdown
 from .toil import entries_from_json as toil_entries_from_json
@@ -141,6 +146,18 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_retention_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.retention) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.retention}: {exc}", file=sys.stderr)
+        return 2
+    results = check_retention(retention_records_from_json(data))
+    print(retention_to_markdown(results))
+    return 1 if any(r.status != "compliant" for r in results) else 0
 
 
 def cmd_audit_diff(args: argparse.Namespace) -> int:
@@ -859,6 +876,18 @@ def build_parser() -> argparse.ArgumentParser:
     audit_diff.add_argument("--expected", required=True, help="Expected config JSON.")
     audit_diff.add_argument("--actual", required=True, help="Actual config JSON.")
     audit_diff.set_defaults(func=cmd_audit_diff)
+
+    retention = sub.add_parser("retention", help="Check log retention policy.")
+    retention_sub = retention.add_subparsers(dest="retention_command", required=True)
+
+    retention_check = retention_sub.add_parser(
+        "check", help="Check retention from a JSON file."
+    )
+    retention_check.add_argument(
+        "--retention", required=True,
+        help="JSON file: list of {service, log_type, retention_days, required_days}.",
+    )
+    retention_check.set_defaults(func=cmd_retention_check)
     return parser
 
 
