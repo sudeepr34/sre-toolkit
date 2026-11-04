@@ -87,6 +87,9 @@ sre-toolkit audit diff --expected expected.json --actual actual.json
 
 # Retention policy: shortfalls and unconfigured retention (exit 1 on gaps)
 sre-toolkit retention check --retention retention.json
+
+# Queue backlog: depth and age breaches (exit 1 on breach)
+sre-toolkit queue check --queues queues.json
 ```
 
 Example output:
@@ -127,6 +130,7 @@ top errors:
 - [x] Alert rule lint: severity, runbook, owner, duplicates (`monitor` command)
 - [x] Config drift: changed/missing/extra keys with dotted paths (`audit` command)
 - [x] Retention policy: shortfalls + unconfigured retention (`retention` command)
+- [x] Queue backlog: depth + age breaches (`queue` command)
 
 ## Development
 

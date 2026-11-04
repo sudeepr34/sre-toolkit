@@ -23,6 +23,11 @@ from .cost import (
     to_markdown as cost_to_markdown,
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
+from .queue import (
+    check_queues,
+    snapshots_from_json as queue_snapshots_from_json,
+    to_markdown as queue_to_markdown,
+)
 from .retention import (
     check_retention,
     records_from_json as retention_records_from_json,
@@ -146,6 +151,18 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_queue_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.queues) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.queues}: {exc}", file=sys.stderr)
+        return 2
+    results = check_queues(queue_snapshots_from_json(data))
+    print(queue_to_markdown(results))
+    return 1 if any(r.status == "breach" for r in results) else 0
 
 
 def cmd_retention_check(args: argparse.Namespace) -> int:
@@ -888,6 +905,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {service, log_type, retention_days, required_days}.",
     )
     retention_check.set_defaults(func=cmd_retention_check)
+
+    queue = sub.add_parser("queue", help="Analyze queue backlogs.")
+    queue_sub = queue.add_subparsers(dest="queue_command", required=True)
+
+    queue_check = queue_sub.add_parser(
+        "check", help="Check queue backlogs from a JSON file."
+    )
+    queue_check.add_argument(
+        "--queues", required=True,
+        help="JSON file: list of {queue, depth, oldest_age_minutes, max_depth, max_age_minutes}.",
+    )
+    queue_check.set_defaults(func=cmd_queue_check)
     return parser
 
 

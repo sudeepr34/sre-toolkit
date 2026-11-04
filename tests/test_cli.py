@@ -627,3 +627,35 @@ def test_retention_check_missing_file_errors(tmp_path, capsys):
     rc = main(["retention", "check", "--retention", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_queue_check_clean(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "queues.json"
+    path.write_text(_json.dumps([
+        {"queue": "jobs", "depth": 100, "oldest_age_minutes": 10,
+         "max_depth": 1000, "max_age_minutes": 60},
+    ]))
+    rc = main(["queue", "check", "--queues", str(path)])
+    assert rc == 0
+    assert "All queues within thresholds." in capsys.readouterr().out
+
+
+def test_queue_check_breach_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "queues.json"
+    path.write_text(_json.dumps([
+        {"queue": "events", "depth": 2000, "oldest_age_minutes": 90,
+         "max_depth": 1000, "max_age_minutes": 60},
+    ]))
+    rc = main(["queue", "check", "--queues", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "| events | breach |" in out
+    assert "## Breaches" in out
+
+
+def test_queue_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["queue", "check", "--queues", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
