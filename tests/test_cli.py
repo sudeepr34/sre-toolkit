@@ -692,3 +692,34 @@ def test_rollout_check_missing_file_errors(tmp_path, capsys):
     rc = main(["rollout", "check", "--rollouts", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def _canary_args(**overrides):
+    args = {
+        "--canary-error-rate": "0.011", "--baseline-error-rate": "0.010",
+        "--canary-p99": "220", "--baseline-p99": "200",
+        "--canary-requests": "500",
+    }
+    args.update(overrides)
+    flat = []
+    for key, value in args.items():
+        flat.extend([key, value])
+    return ["canary", "analyze", *flat]
+
+
+def test_canary_analyze_promote(tmp_path, capsys):
+    rc = main(_canary_args())
+    assert rc == 0
+    assert "## Verdict: PROMOTE" in capsys.readouterr().out
+
+
+def test_canary_analyze_rollback_exit_1(tmp_path, capsys):
+    rc = main(_canary_args(**{"--canary-error-rate": "0.03"}))
+    assert rc == 1
+    assert "## Verdict: ROLLBACK" in capsys.readouterr().out
+
+
+def test_canary_analyze_hold_exit_1(tmp_path, capsys):
+    rc = main(_canary_args(**{"--canary-requests": "50"}))
+    assert rc == 1
+    assert "## Verdict: HOLD" in capsys.readouterr().out

@@ -93,6 +93,9 @@ sre-toolkit queue check --queues queues.json
 
 # Rollout progress: stuck past deadline or failed (exit 1 on problems)
 sre-toolkit rollout check --rollouts rollouts.json
+
+# Canary analysis: promote / hold / rollback (exit 0 only on promote)
+sre-toolkit canary analyze --canary-error-rate 0.011 --baseline-error-rate 0.010 --canary-p99 220 --baseline-p99 200 --canary-requests 500
 ```
 
 Example output:
@@ -135,6 +138,7 @@ top errors:
 - [x] Retention policy: shortfalls + unconfigured retention (`retention` command)
 - [x] Queue backlog: depth + age breaches (`queue` command)
 - [x] Rollout progress: stuck past deadline or failed (`rollout` command)
+- [x] Canary analysis: promote / hold / rollback verdict (`canary` command)
 
 ## Development
 

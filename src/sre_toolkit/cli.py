@@ -23,6 +23,7 @@ from .cost import (
     to_markdown as cost_to_markdown,
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
+from .canary import CanaryAnalysis
 from .queue import (
     check_queues,
     snapshots_from_json as queue_snapshots_from_json,
@@ -156,6 +157,21 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_canary_analyze(args: argparse.Namespace) -> int:
+    analysis = CanaryAnalysis(
+        canary_error_rate=args.canary_error_rate,
+        baseline_error_rate=args.baseline_error_rate,
+        canary_p99_ms=args.canary_p99,
+        baseline_p99_ms=args.baseline_p99,
+        canary_requests=args.canary_requests,
+        max_error_delta=args.max_error_delta,
+        max_p99_ratio=args.max_p99_ratio,
+        min_requests=args.min_requests,
+    )
+    print(analysis.to_markdown())
+    return 0 if analysis.verdict() == "promote" else 1
 
 
 def cmd_rollout_check(args: argparse.Namespace) -> int:
@@ -948,6 +964,30 @@ def build_parser() -> argparse.ArgumentParser:
     )
     rollout_check.add_argument("--now", default=None, help="ISO time for ages (testing).")
     rollout_check.set_defaults(func=cmd_rollout_check)
+
+    canary = sub.add_parser("canary", help="Analyze a canary deployment.")
+    canary_sub = canary.add_subparsers(dest="canary_command", required=True)
+
+    canary_analyze = canary_sub.add_parser(
+        "analyze", help="Compare canary vs baseline and give a verdict."
+    )
+    canary_analyze.add_argument("--canary-error-rate", type=float, required=True,
+                                help="Canary error rate as a fraction, e.g. 0.02.")
+    canary_analyze.add_argument("--baseline-error-rate", type=float, required=True,
+                                help="Baseline error rate as a fraction.")
+    canary_analyze.add_argument("--canary-p99", type=float, required=True,
+                                help="Canary p99 latency in ms.")
+    canary_analyze.add_argument("--baseline-p99", type=float, required=True,
+                                help="Baseline p99 latency in ms.")
+    canary_analyze.add_argument("--canary-requests", type=int, required=True,
+                                help="Requests observed on the canary.")
+    canary_analyze.add_argument("--max-error-delta", type=float, default=0.01,
+                                help="Allowed error-rate rise (default 0.01).")
+    canary_analyze.add_argument("--max-p99-ratio", type=float, default=1.5,
+                                help="Allowed canary/baseline p99 ratio (default 1.5).")
+    canary_analyze.add_argument("--min-requests", type=int, default=100,
+                                help="Min requests for a decision (default 100).")
+    canary_analyze.set_defaults(func=cmd_canary_analyze)
     return parser
 
 
