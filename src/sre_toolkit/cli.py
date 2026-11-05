@@ -27,6 +27,11 @@ from .canary import CanaryAnalysis
 from .health import checks_from_json as health_checks_from_json
 from .health import to_markdown as health_to_markdown
 from .health import overall_status
+from .service import (
+    audit_services,
+    services_from_json,
+    to_markdown as service_to_markdown,
+)
 from .probe import probe_url, to_markdown as probe_to_markdown
 from .queue import (
     check_queues,
@@ -161,6 +166,19 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_service_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.services) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.services}: {exc}", file=sys.stderr)
+        return 2
+    services = services_from_json(data)
+    issues = audit_services(services)
+    print(service_to_markdown(services, issues))
+    return 1 if issues else 0
 
 
 def cmd_health_rollup(args: argparse.Namespace) -> int:
@@ -1045,6 +1063,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {service, status, latency_ms}.",
     )
     health_rollup.set_defaults(func=cmd_health_rollup)
+
+    service = sub.add_parser("service", help="Audit the service catalog.")
+    service_sub = service.add_subparsers(dest="service_command", required=True)
+
+    service_audit = service_sub.add_parser(
+        "audit", help="Audit services from a JSON file."
+    )
+    service_audit.add_argument(
+        "--services", required=True,
+        help="JSON file: list of {name, owner, tier, runbook}.",
+    )
+    service_audit.set_defaults(func=cmd_service_audit)
     return parser
 
 

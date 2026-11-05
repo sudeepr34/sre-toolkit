@@ -102,6 +102,9 @@ sre-toolkit probe check https://api.example.com/health
 
 # Service health rollup: worst status wins (exit 1 unless all up)
 sre-toolkit health rollup --checks checks.json
+
+# Service catalog audit: owner, tier, runbook (exit 1 on issues)
+sre-toolkit service audit --services services.json
 ```
 
 Example output:
@@ -147,6 +150,7 @@ top errors:
 - [x] Canary analysis: promote / hold / rollback verdict (`canary` command)
 - [x] Endpoint probing: status + latency checks (`probe` command)
 - [x] Service health rollup: worst status wins (`health` command)
+- [x] Service catalog audit: owner, tier, runbook (`service` command)
 
 ## Development
 

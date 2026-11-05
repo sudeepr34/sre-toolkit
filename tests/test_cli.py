@@ -785,3 +785,34 @@ def test_health_rollup_missing_file_errors(tmp_path, capsys):
     rc = main(["health", "rollup", "--checks", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_service_audit_clean(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "services.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "owner": "sre", "tier": "critical",
+         "runbook": "https://runbooks/api"},
+    ]))
+    rc = main(["service", "audit", "--services", str(path)])
+    assert rc == 0
+    assert "Catalog clean" in capsys.readouterr().out
+
+
+def test_service_audit_issues_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "services.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "owner": "", "tier": "critical", "runbook": ""},
+    ]))
+    rc = main(["service", "audit", "--services", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Issues found: 2" in out
+    assert "| api | owner | no owner team |" in out
+
+
+def test_service_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["service", "audit", "--services", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
