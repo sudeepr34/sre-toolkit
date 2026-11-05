@@ -816,3 +816,35 @@ def test_service_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["service", "audit", "--services", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_dora_report(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "deploys.json"
+    path.write_text(_json.dumps([
+        {"service": "api", "timestamp": "2026-10-10", "status": "success", "lead_time_hours": 4},
+        {"service": "api", "timestamp": "2026-10-15", "status": "failed", "lead_time_hours": 6},
+        {"service": "web", "timestamp": "2026-09-01", "status": "success"},
+    ]))
+    rc = main(["dora", "report", "--deploys", str(path),
+               "--since", "2026-10-01", "--until", "2026-10-31"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Deploys: 2" in out
+    assert "Change failure rate: 50.0%" in out
+    assert "| api | 2 | 1 |" in out
+
+
+def test_dora_report_bad_date_errors(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "deploys.json"
+    path.write_text(_json.dumps([]))
+    rc = main(["dora", "report", "--deploys", str(path), "--since", "not-a-date"])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
+
+
+def test_dora_report_missing_file_errors(tmp_path, capsys):
+    rc = main(["dora", "report", "--deploys", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

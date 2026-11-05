@@ -105,6 +105,9 @@ sre-toolkit health rollup --checks checks.json
 
 # Service catalog audit: owner, tier, runbook (exit 1 on issues)
 sre-toolkit service audit --services services.json
+
+# DORA metrics: deployment frequency + change failure rate
+sre-toolkit dora report --deploys deploys.json --since 2026-10-01 --until 2026-10-31
 ```
 
 Example output:
@@ -151,6 +154,7 @@ top errors:
 - [x] Endpoint probing: status + latency checks (`probe` command)
 - [x] Service health rollup: worst status wins (`health` command)
 - [x] Service catalog audit: owner, tier, runbook (`service` command)
+- [x] DORA metrics: deployment frequency + change failure rate (`dora` command)
 
 ## Development
 

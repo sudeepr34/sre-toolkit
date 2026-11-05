@@ -24,6 +24,11 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .dora import (
+    in_window,
+    records_from_json as dora_records_from_json,
+    to_markdown as dora_to_markdown,
+)
 from .health import checks_from_json as health_checks_from_json
 from .health import to_markdown as health_to_markdown
 from .health import overall_status
@@ -165,6 +170,28 @@ def cmd_slo(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(assessment.to_markdown())
+    return 0
+
+
+def cmd_dora_report(args: argparse.Namespace) -> int:
+    try:
+        with open(args.deploys) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.deploys}: {exc}", file=sys.stderr)
+        return 2
+    try:
+        until = date.fromisoformat(args.until) if args.until else date.today()
+        start = (
+            date.fromisoformat(args.since)
+            if args.since
+            else date.fromordinal(until.toordinal() - 27)
+        )
+    except ValueError as exc:
+        print(f"error: bad date: {exc}", file=sys.stderr)
+        return 2
+    records = in_window(dora_records_from_json(data), start, until)
+    print(dora_to_markdown(records, start, until))
     return 0
 
 
@@ -1075,6 +1102,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {name, owner, tier, runbook}.",
     )
     service_audit.set_defaults(func=cmd_service_audit)
+
+    dora = sub.add_parser("dora", help="Report DORA metrics.")
+    dora_sub = dora.add_subparsers(dest="dora_command", required=True)
+
+    dora_report = dora_sub.add_parser(
+        "report", help="DORA metrics from deploy records."
+    )
+    dora_report.add_argument(
+        "--deploys", required=True,
+        help="JSON file: list of {service, timestamp, status, lead_time_hours}.",
+    )
+    dora_report.add_argument("--since", default=None, help="Window start, YYYY-MM-DD.")
+    dora_report.add_argument("--until", default=None, help="Window end, YYYY-MM-DD.")
+    dora_report.set_defaults(func=cmd_dora_report)
     return parser
 
 
