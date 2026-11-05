@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .health import checks_from_json as health_checks_from_json
+from .health import to_markdown as health_to_markdown
+from .health import overall_status
 from .probe import probe_url, to_markdown as probe_to_markdown
 from .queue import (
     check_queues,
@@ -158,6 +161,18 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_health_rollup(args: argparse.Namespace) -> int:
+    try:
+        with open(args.checks) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.checks}: {exc}", file=sys.stderr)
+        return 2
+    checks = health_checks_from_json(data)
+    print(health_to_markdown(checks))
+    return 1 if overall_status(checks) != "up" else 0
 
 
 def cmd_probe_check(args: argparse.Namespace) -> int:
@@ -1018,6 +1033,18 @@ def build_parser() -> argparse.ArgumentParser:
     probe_check.add_argument("--timeout", type=float, default=5.0,
                              help="Request timeout in seconds (default 5).")
     probe_check.set_defaults(func=cmd_probe_check)
+
+    health = sub.add_parser("health", help="Roll up service health checks.")
+    health_sub = health.add_subparsers(dest="health_command", required=True)
+
+    health_rollup = health_sub.add_parser(
+        "rollup", help="Roll up health checks from a JSON file."
+    )
+    health_rollup.add_argument(
+        "--checks", required=True,
+        help="JSON file: list of {service, status, latency_ms}.",
+    )
+    health_rollup.set_defaults(func=cmd_health_rollup)
     return parser
 
 

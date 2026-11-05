@@ -754,3 +754,34 @@ def test_probe_check_unreachable_exit_1(tmp_path, capsys):
     rc = main(["probe", "check", "http://127.0.0.1:1/", "--timeout", "1"])
     assert rc == 1
     assert "unreachable" in capsys.readouterr().out
+
+
+def test_health_rollup_all_up(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "checks.json"
+    path.write_text(_json.dumps([
+        {"service": "api", "status": "up", "latency_ms": 120},
+    ]))
+    rc = main(["health", "rollup", "--checks", str(path)])
+    assert rc == 0
+    assert "All services up." in capsys.readouterr().out
+
+
+def test_health_rollup_down_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "checks.json"
+    path.write_text(_json.dumps([
+        {"service": "api", "status": "up", "latency_ms": 120},
+        {"service": "cache", "status": "down"},
+    ]))
+    rc = main(["health", "rollup", "--checks", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Overall: **down**" in out
+    assert "## Needs attention" in out
+
+
+def test_health_rollup_missing_file_errors(tmp_path, capsys):
+    rc = main(["health", "rollup", "--checks", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
