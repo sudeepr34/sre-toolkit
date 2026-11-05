@@ -659,3 +659,36 @@ def test_queue_check_missing_file_errors(tmp_path, capsys):
     rc = main(["queue", "check", "--queues", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_rollout_check_clean(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "rollouts.json"
+    path.write_text(_json.dumps([
+        {"name": "api-v2", "service": "api", "status": "complete",
+         "started": "2026-11-05T11:00", "deadline_minutes": 30, "progress_pct": 100},
+    ]))
+    rc = main(["rollout", "check", "--rollouts", str(path)])
+    assert rc == 0
+    assert "All rollouts healthy." in capsys.readouterr().out
+
+
+def test_rollout_check_stuck_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "rollouts.json"
+    path.write_text(_json.dumps([
+        {"name": "api-v2", "service": "api", "status": "progressing",
+         "started": "2026-11-05T11:00", "deadline_minutes": 30, "progress_pct": 50},
+    ]))
+    rc = main(["rollout", "check", "--rollouts", str(path),
+               "--now", "2026-11-05T12:00"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "| api-v2 | api | stuck |" in out
+    assert "## Needs attention" in out
+
+
+def test_rollout_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["rollout", "check", "--rollouts", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

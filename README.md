@@ -90,6 +90,9 @@ sre-toolkit retention check --retention retention.json
 
 # Queue backlog: depth and age breaches (exit 1 on breach)
 sre-toolkit queue check --queues queues.json
+
+# Rollout progress: stuck past deadline or failed (exit 1 on problems)
+sre-toolkit rollout check --rollouts rollouts.json
 ```
 
 Example output:
@@ -131,6 +134,7 @@ top errors:
 - [x] Config drift: changed/missing/extra keys with dotted paths (`audit` command)
 - [x] Retention policy: shortfalls + unconfigured retention (`retention` command)
 - [x] Queue backlog: depth + age breaches (`queue` command)
+- [x] Rollout progress: stuck past deadline or failed (`rollout` command)
 
 ## Development
 

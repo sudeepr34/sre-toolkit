@@ -28,6 +28,11 @@ from .queue import (
     snapshots_from_json as queue_snapshots_from_json,
     to_markdown as queue_to_markdown,
 )
+from .rollout import (
+    check_rollouts,
+    rollouts_from_json,
+    to_markdown as rollout_to_markdown,
+)
 from .retention import (
     check_retention,
     records_from_json as retention_records_from_json,
@@ -151,6 +156,19 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_rollout_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.rollouts) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.rollouts}: {exc}", file=sys.stderr)
+        return 2
+    now = parse_datetime(args.now) if args.now else None
+    results = check_rollouts(rollouts_from_json(data), now=now)
+    print(rollout_to_markdown(results))
+    return 1 if any(r.status != "ok" for r in results) else 0
 
 
 def cmd_queue_check(args: argparse.Namespace) -> int:
@@ -917,6 +935,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {queue, depth, oldest_age_minutes, max_depth, max_age_minutes}.",
     )
     queue_check.set_defaults(func=cmd_queue_check)
+
+    rollout = sub.add_parser("rollout", help="Check rollout progress.")
+    rollout_sub = rollout.add_subparsers(dest="rollout_command", required=True)
+
+    rollout_check = rollout_sub.add_parser(
+        "check", help="Check rollouts from a JSON file."
+    )
+    rollout_check.add_argument(
+        "--rollouts", required=True,
+        help="JSON file: list of {name, service, status, started, deadline_minutes, progress_pct}.",
+    )
+    rollout_check.add_argument("--now", default=None, help="ISO time for ages (testing).")
+    rollout_check.set_defaults(func=cmd_rollout_check)
     return parser
 
 
