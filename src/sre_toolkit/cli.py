@@ -24,6 +24,7 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .probe import probe_url, to_markdown as probe_to_markdown
 from .queue import (
     check_queues,
     snapshots_from_json as queue_snapshots_from_json,
@@ -157,6 +158,20 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_probe_check(args: argparse.Namespace) -> int:
+    results = [
+        probe_url(
+            url,
+            expected_status=args.expect,
+            max_latency_ms=args.max_latency_ms,
+            timeout=args.timeout,
+        )
+        for url in args.urls
+    ]
+    print(probe_to_markdown(results))
+    return 1 if any(r.status == "fail" for r in results) else 0
 
 
 def cmd_canary_analyze(args: argparse.Namespace) -> int:
@@ -988,6 +1003,21 @@ def build_parser() -> argparse.ArgumentParser:
     canary_analyze.add_argument("--min-requests", type=int, default=100,
                                 help="Min requests for a decision (default 100).")
     canary_analyze.set_defaults(func=cmd_canary_analyze)
+
+    probe = sub.add_parser("probe", help="Probe endpoints for health.")
+    probe_sub = probe.add_subparsers(dest="probe_command", required=True)
+
+    probe_check = probe_sub.add_parser(
+        "check", help="Probe one or more URLs."
+    )
+    probe_check.add_argument("urls", nargs="+", help="URLs to probe.")
+    probe_check.add_argument("--expect", type=int, default=200,
+                             help="Expected status code (default 200).")
+    probe_check.add_argument("--max-latency-ms", type=float, default=1000.0,
+                             help="Max latency in ms (default 1000).")
+    probe_check.add_argument("--timeout", type=float, default=5.0,
+                             help="Request timeout in seconds (default 5).")
+    probe_check.set_defaults(func=cmd_probe_check)
     return parser
 
 

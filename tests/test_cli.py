@@ -723,3 +723,34 @@ def test_canary_analyze_hold_exit_1(tmp_path, capsys):
     rc = main(_canary_args(**{"--canary-requests": "50"}))
     assert rc == 1
     assert "## Verdict: HOLD" in capsys.readouterr().out
+
+
+def test_probe_check_local_server(tmp_path, capsys):
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def log_message(self, *args):
+            pass
+
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{httpd.server_address[1]}/"
+    try:
+        rc = main(["probe", "check", url])
+    finally:
+        httpd.shutdown()
+    assert rc == 0
+    assert "All endpoints healthy." in capsys.readouterr().out
+
+
+def test_probe_check_unreachable_exit_1(tmp_path, capsys):
+    rc = main(["probe", "check", "http://127.0.0.1:1/", "--timeout", "1"])
+    assert rc == 1
+    assert "unreachable" in capsys.readouterr().out
