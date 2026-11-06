@@ -988,3 +988,19 @@ def test_flags_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["flags", "audit", "--flags", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_dns_check_localhost_ok(capsys):
+    rc = main(["dns", "check", "localhost"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Hosts checked: 1" in out
+    assert "| localhost | 127.0.0.1 | ok |" in out
+
+
+def test_dns_check_failure_exit_1(capsys):
+    rc = main(["dns", "check", "localhost", "not a host"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Failed: 1" in out
+    assert "failed:" in out

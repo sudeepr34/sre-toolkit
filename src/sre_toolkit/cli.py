@@ -24,6 +24,8 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .dns import check_dns as dns_check_dns
+from .dns import to_markdown as dns_to_markdown
 from .flags import audit_flags as flags_audit_flags
 from .flags import flags_from_json as flags_from_json_fn
 from .flags import to_markdown as flags_to_markdown
@@ -183,6 +185,12 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_dns_check(args: argparse.Namespace) -> int:
+    results = dns_check_dns(args.hosts)
+    print(dns_to_markdown(results))
+    return 1 if any(not r.ok for r in results) else 0
 
 
 def cmd_flags_audit(args: argparse.Namespace) -> int:
@@ -1251,6 +1259,15 @@ def build_parser() -> argparse.ArgumentParser:
     flags_audit.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
     flags_audit.add_argument("--stale-days", type=int, default=90)
     flags_audit.set_defaults(func=cmd_flags_audit)
+
+    dns = sub.add_parser("dns", help="Check DNS resolution.")
+    dns_sub = dns.add_subparsers(dest="dns_command", required=True)
+
+    dns_check = dns_sub.add_parser(
+        "check", help="Resolve hostnames to IPv4 addresses."
+    )
+    dns_check.add_argument("hosts", nargs="+", help="Hostnames to resolve.")
+    dns_check.set_defaults(func=cmd_dns_check)
     return parser
 
 

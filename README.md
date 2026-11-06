@@ -120,6 +120,9 @@ sre-toolkit trace analyze --spans spans.json
 
 # Feature flag audit: stale enabled flags + missing owners
 sre-toolkit flags audit --flags flags.json
+
+# DNS resolution: which hostnames resolve, which fail
+sre-toolkit dns check api.example.com db.example.com
 ```
 
 Example output:
@@ -171,6 +174,7 @@ top errors:
 - [x] TLS certificate expiry: warn / critical / expired (`cert` command)
 - [x] Distributed trace analysis: critical path + error spans (`trace` command)
 - [x] Feature flag audit: stale enabled flags + missing owners (`flags` command)
+- [x] DNS resolution: which hostnames resolve, which fail (`dns` command)
 
 ## Development
 
