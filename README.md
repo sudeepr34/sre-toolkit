@@ -117,6 +117,9 @@ sre-toolkit cert check --certs certs.json
 
 # Distributed trace analysis: critical path + error spans
 sre-toolkit trace analyze --spans spans.json
+
+# Feature flag audit: stale enabled flags + missing owners
+sre-toolkit flags audit --flags flags.json
 ```
 
 Example output:
@@ -167,6 +170,7 @@ top errors:
 - [x] Latency percentiles: p50/p95/p99 with a p95 breach gate (`latency` command)
 - [x] TLS certificate expiry: warn / critical / expired (`cert` command)
 - [x] Distributed trace analysis: critical path + error spans (`trace` command)
+- [x] Feature flag audit: stale enabled flags + missing owners (`flags` command)
 
 ## Development
 

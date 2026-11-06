@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .flags import audit_flags as flags_audit_flags
+from .flags import flags_from_json as flags_from_json_fn
+from .flags import to_markdown as flags_to_markdown
 from .trace import spans_from_json as trace_spans_from_json
 from .trace import to_markdown as trace_to_markdown
 from .trace import error_spans as trace_error_spans
@@ -180,6 +183,20 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_flags_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.flags) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.flags}: {exc}", file=sys.stderr)
+        return 2
+    today = date.fromisoformat(args.today) if args.today else date.today()
+    flags = flags_from_json_fn(data)
+    issues = flags_audit_flags(flags, today, stale_days=args.stale_days)
+    print(flags_to_markdown(flags, issues))
+    return 1 if issues else 0
 
 
 def cmd_trace_analyze(args: argparse.Namespace) -> int:
@@ -1220,6 +1237,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     trace_analyze.add_argument("--trace-id", default=None, help="Filter to one trace.")
     trace_analyze.set_defaults(func=cmd_trace_analyze)
+
+    flags = sub.add_parser("flags", help="Audit feature flags.")
+    flags_sub = flags.add_subparsers(dest="flags_command", required=True)
+
+    flags_audit = flags_sub.add_parser(
+        "audit", help="Audit flags from a JSON file."
+    )
+    flags_audit.add_argument(
+        "--flags", required=True,
+        help="JSON file: list of {name, enabled, owner, last_used, created}.",
+    )
+    flags_audit.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
+    flags_audit.add_argument("--stale-days", type=int, default=90)
+    flags_audit.set_defaults(func=cmd_flags_audit)
     return parser
 
 

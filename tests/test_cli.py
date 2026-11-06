@@ -956,3 +956,35 @@ def test_trace_analyze_no_spans_errors(tmp_path, capsys):
     rc = main(["trace", "analyze", "--spans", str(path)])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_flags_audit_clean(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "flags.json"
+    path.write_text(_json.dumps([
+        {"name": "new-checkout", "enabled": True, "owner": "sre",
+         "last_used": "2026-11-05", "created": "2026-01-01"},
+    ]))
+    rc = main(["flags", "audit", "--flags", str(path), "--today", "2026-11-06"])
+    assert rc == 0
+    assert "Flags clean" in capsys.readouterr().out
+
+
+def test_flags_audit_issues_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "flags.json"
+    path.write_text(_json.dumps([
+        {"name": "old", "enabled": True, "owner": "",
+         "last_used": "2026-01-01", "created": "2026-01-01"},
+    ]))
+    rc = main(["flags", "audit", "--flags", str(path), "--today", "2026-11-06"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Issues found: 2" in out
+    assert "| old | owner | no owner team |" in out
+
+
+def test_flags_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["flags", "audit", "--flags", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
