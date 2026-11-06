@@ -111,6 +111,9 @@ sre-toolkit dora report --deploys deploys.json --since 2026-10-01 --until 2026-1
 
 # Latency percentiles: p50/p95/p99 with a p95 breach gate
 sre-toolkit latency analyze --samples samples.json --p95-threshold 500
+
+# TLS certificate expiry: warn / critical / expired
+sre-toolkit cert check --certs certs.json
 ```
 
 Example output:
@@ -159,6 +162,7 @@ top errors:
 - [x] Service catalog audit: owner, tier, runbook (`service` command)
 - [x] DORA metrics: deployment frequency + change failure rate (`dora` command)
 - [x] Latency percentiles: p50/p95/p99 with a p95 breach gate (`latency` command)
+- [x] TLS certificate expiry: warn / critical / expired (`cert` command)
 
 ## Development
 

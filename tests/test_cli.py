@@ -877,3 +877,36 @@ def test_latency_analyze_missing_file_errors(tmp_path, capsys):
     rc = main(["latency", "analyze", "--samples", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_cert_check_ok_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "certs.json"
+    path.write_text(_json.dumps([
+        {"host": "a.example.com", "expires": "2027-01-01"},
+    ]))
+    rc = main(["cert", "check", "--certs", str(path), "--today", "2026-11-06"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Certificates checked: 1" in out
+    assert "- OK: 1" in out
+
+
+def test_cert_check_critical_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "certs.json"
+    path.write_text(_json.dumps([
+        {"host": "a.example.com", "expires": "2026-11-10"},
+        {"host": "b.example.com", "expires": "2026-11-25"},
+    ]))
+    rc = main(["cert", "check", "--certs", str(path), "--today", "2026-11-06"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Critical: 1" in out
+    assert "- Warn: 1" in out
+
+
+def test_cert_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["cert", "check", "--certs", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

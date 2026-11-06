@@ -24,6 +24,10 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .cert import check_certs as cert_check_certs
+from .cert import records_from_json as cert_records_from_json
+from .cert import to_markdown as cert_to_markdown
+from .cert import attention_needed as cert_attention_needed
 from .latency import analyze as latency_analyze
 from .latency import to_markdown as latency_to_markdown
 from .dora import (
@@ -173,6 +177,24 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_cert_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.certs) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.certs}: {exc}", file=sys.stderr)
+        return 2
+    today = date.fromisoformat(args.today) if args.today else date.today()
+    results = cert_check_certs(
+        cert_records_from_json(data),
+        today,
+        warn_days=args.warn_days,
+        critical_days=args.critical_days,
+    )
+    print(cert_to_markdown(results))
+    return 1 if cert_attention_needed(results) else 0
 
 
 def cmd_latency_analyze(args: argparse.Namespace) -> int:
@@ -1149,6 +1171,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="p95 SLO threshold in ms (default 500).",
     )
     latency_analyze.set_defaults(func=cmd_latency_analyze)
+
+    cert = sub.add_parser("cert", help="Check TLS certificate expiry.")
+    cert_sub = cert.add_subparsers(dest="cert_command", required=True)
+
+    cert_check = cert_sub.add_parser(
+        "check", help="Check expiry of certificates from a JSON file."
+    )
+    cert_check.add_argument(
+        "--certs", required=True,
+        help="JSON file: list of {host, expires, issuer}.",
+    )
+    cert_check.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
+    cert_check.add_argument("--warn-days", type=int, default=30)
+    cert_check.add_argument("--critical-days", type=int, default=7)
+    cert_check.set_defaults(func=cmd_cert_check)
     return parser
 
 
