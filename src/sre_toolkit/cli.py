@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .sla import check_sla as sla_check_sla
+from .sla import records_from_json as sla_records_from_json
+from .sla import to_markdown as sla_to_markdown
 from .dns import check_dns as dns_check_dns
 from .dns import to_markdown as dns_to_markdown
 from .flags import audit_flags as flags_audit_flags
@@ -185,6 +188,18 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_sla_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.sla) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.sla}: {exc}", file=sys.stderr)
+        return 2
+    results = sla_check_sla(sla_records_from_json(data), args.window_days)
+    print(sla_to_markdown(results, args.window_days))
+    return 1 if any(not r.compliant for r in results) else 0
 
 
 def cmd_dns_check(args: argparse.Namespace) -> int:
@@ -1268,6 +1283,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dns_check.add_argument("hosts", nargs="+", help="Hostnames to resolve.")
     dns_check.set_defaults(func=cmd_dns_check)
+
+    sla = sub.add_parser("sla", help="Check SLA availability compliance.")
+    sla_sub = sla.add_subparsers(dest="sla_command", required=True)
+
+    sla_check = sla_sub.add_parser(
+        "check", help="Availability vs SLA target from a JSON file."
+    )
+    sla_check.add_argument(
+        "--sla", required=True,
+        help="JSON file: list of {service, uptime_pct, target_pct}.",
+    )
+    sla_check.add_argument("--window-days", type=int, default=30)
+    sla_check.set_defaults(func=cmd_sla_check)
     return parser
 
 

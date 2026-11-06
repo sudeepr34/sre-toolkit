@@ -123,6 +123,9 @@ sre-toolkit flags audit --flags flags.json
 
 # DNS resolution: which hostnames resolve, which fail
 sre-toolkit dns check api.example.com db.example.com
+
+# SLA availability: uptime vs target, error budget left in minutes
+sre-toolkit sla check --sla sla.json
 ```
 
 Example output:
@@ -175,6 +178,7 @@ top errors:
 - [x] Distributed trace analysis: critical path + error spans (`trace` command)
 - [x] Feature flag audit: stale enabled flags + missing owners (`flags` command)
 - [x] DNS resolution: which hostnames resolve, which fail (`dns` command)
+- [x] SLA availability: uptime vs target, error budget left in minutes (`sla` command)
 
 ## Development
 

@@ -1004,3 +1004,36 @@ def test_dns_check_failure_exit_1(capsys):
     out = capsys.readouterr().out
     assert "- Failed: 1" in out
     assert "failed:" in out
+
+
+def test_sla_check_compliant_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "sla.json"
+    path.write_text(_json.dumps([
+        {"service": "api", "uptime_pct": 99.95, "target_pct": 99.9},
+    ]))
+    rc = main(["sla", "check", "--sla", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Services checked: 1" in out
+    assert "- Breached: 0" in out
+    assert "| api | 99.950% | 99.900% | 21.6 | compliant |" in out
+
+
+def test_sla_check_breach_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "sla.json"
+    path.write_text(_json.dumps([
+        {"service": "db", "uptime_pct": 99.5, "target_pct": 99.9},
+    ]))
+    rc = main(["sla", "check", "--sla", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Breached: 1" in out
+    assert "BREACHED" in out
+
+
+def test_sla_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["sla", "check", "--sla", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
