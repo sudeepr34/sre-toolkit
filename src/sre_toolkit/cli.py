@@ -24,6 +24,8 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .latency import analyze as latency_analyze
+from .latency import to_markdown as latency_to_markdown
 from .dora import (
     in_window,
     records_from_json as dora_records_from_json,
@@ -171,6 +173,22 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_latency_analyze(args: argparse.Namespace) -> int:
+    try:
+        with open(args.samples) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.samples}: {exc}", file=sys.stderr)
+        return 2
+    try:
+        stats = latency_analyze([float(value) for value in data])
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(latency_to_markdown(stats, args.p95_threshold))
+    return 1 if stats.p95 > args.p95_threshold else 0
 
 
 def cmd_dora_report(args: argparse.Namespace) -> int:
@@ -1116,6 +1134,21 @@ def build_parser() -> argparse.ArgumentParser:
     dora_report.add_argument("--since", default=None, help="Window start, YYYY-MM-DD.")
     dora_report.add_argument("--until", default=None, help="Window end, YYYY-MM-DD.")
     dora_report.set_defaults(func=cmd_dora_report)
+
+    latency = sub.add_parser("latency", help="Analyze latency samples.")
+    latency_sub = latency.add_subparsers(dest="latency_command", required=True)
+
+    latency_analyze = latency_sub.add_parser(
+        "analyze", help="Percentiles and p95 gate from a JSON list of samples (ms)."
+    )
+    latency_analyze.add_argument(
+        "--samples", required=True, help="JSON file: list of latencies in ms.",
+    )
+    latency_analyze.add_argument(
+        "--p95-threshold", type=float, default=500.0,
+        help="p95 SLO threshold in ms (default 500).",
+    )
+    latency_analyze.set_defaults(func=cmd_latency_analyze)
     return parser
 
 

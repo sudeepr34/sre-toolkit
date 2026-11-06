@@ -108,6 +108,9 @@ sre-toolkit service audit --services services.json
 
 # DORA metrics: deployment frequency + change failure rate
 sre-toolkit dora report --deploys deploys.json --since 2026-10-01 --until 2026-10-31
+
+# Latency percentiles: p50/p95/p99 with a p95 breach gate
+sre-toolkit latency analyze --samples samples.json --p95-threshold 500
 ```
 
 Example output:
@@ -155,6 +158,7 @@ top errors:
 - [x] Service health rollup: worst status wins (`health` command)
 - [x] Service catalog audit: owner, tier, runbook (`service` command)
 - [x] DORA metrics: deployment frequency + change failure rate (`dora` command)
+- [x] Latency percentiles: p50/p95/p99 with a p95 breach gate (`latency` command)
 
 ## Development
 

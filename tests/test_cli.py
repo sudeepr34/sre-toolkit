@@ -848,3 +848,32 @@ def test_dora_report_missing_file_errors(tmp_path, capsys):
     rc = main(["dora", "report", "--deploys", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_latency_analyze_within_threshold(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "samples.json"
+    path.write_text(_json.dumps([10, 20, 30, 40, 50]))
+    rc = main(["latency", "analyze", "--samples", str(path),
+               "--p95-threshold", "500"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Samples: 5" in out
+    assert "| p95 | 50.0 |" in out
+    assert "within threshold" in out
+
+
+def test_latency_analyze_breach_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "samples.json"
+    path.write_text(_json.dumps([10, 20, 30, 40, 1000]))
+    rc = main(["latency", "analyze", "--samples", str(path),
+               "--p95-threshold", "500"])
+    assert rc == 1
+    assert "BREACH" in capsys.readouterr().out
+
+
+def test_latency_analyze_missing_file_errors(tmp_path, capsys):
+    rc = main(["latency", "analyze", "--samples", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
