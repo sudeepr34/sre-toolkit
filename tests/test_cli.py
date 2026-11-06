@@ -910,3 +910,49 @@ def test_cert_check_missing_file_errors(tmp_path, capsys):
     rc = main(["cert", "check", "--certs", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def _trace_json():
+    import json as _json
+    return _json.dumps([
+        {"trace_id": "t1", "span_id": "r", "parent_id": "",
+         "service": "edge", "operation": "handle", "start_ms": 0, "duration_ms": 100},
+        {"trace_id": "t1", "span_id": "a", "parent_id": "r",
+         "service": "api", "operation": "process", "start_ms": 10, "duration_ms": 80},
+        {"trace_id": "t1", "span_id": "c", "parent_id": "a",
+         "service": "cache", "operation": "get", "start_ms": 20, "duration_ms": 10,
+         "status": "error"},
+    ])
+
+
+def test_trace_analyze_error_exit_1(tmp_path, capsys):
+    path = tmp_path / "spans.json"
+    path.write_text(_trace_json())
+    rc = main(["trace", "analyze", "--spans", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Spans: 3" in out
+    assert "Critical path: 190.0 ms" in out
+    assert "cache::get (c)" in out
+
+
+def test_trace_analyze_trace_filter(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "spans.json"
+    data = _json.loads(_trace_json())
+    data.append({"trace_id": "t2", "span_id": "x", "parent_id": "",
+                 "service": "other", "operation": "run",
+                 "start_ms": 0, "duration_ms": 5})
+    path.write_text(_json.dumps(data))
+    rc = main(["trace", "analyze", "--spans", str(path), "--trace-id", "t2"])
+    assert rc == 0
+    assert "Spans: 1" in capsys.readouterr().out
+
+
+def test_trace_analyze_no_spans_errors(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "spans.json"
+    path.write_text(_json.dumps([]))
+    rc = main(["trace", "analyze", "--spans", str(path)])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

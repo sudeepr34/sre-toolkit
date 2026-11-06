@@ -114,6 +114,9 @@ sre-toolkit latency analyze --samples samples.json --p95-threshold 500
 
 # TLS certificate expiry: warn / critical / expired
 sre-toolkit cert check --certs certs.json
+
+# Distributed trace analysis: critical path + error spans
+sre-toolkit trace analyze --spans spans.json
 ```
 
 Example output:
@@ -163,6 +166,7 @@ top errors:
 - [x] DORA metrics: deployment frequency + change failure rate (`dora` command)
 - [x] Latency percentiles: p50/p95/p99 with a p95 breach gate (`latency` command)
 - [x] TLS certificate expiry: warn / critical / expired (`cert` command)
+- [x] Distributed trace analysis: critical path + error spans (`trace` command)
 
 ## Development
 

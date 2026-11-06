@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .trace import spans_from_json as trace_spans_from_json
+from .trace import to_markdown as trace_to_markdown
+from .trace import error_spans as trace_error_spans
 from .cert import check_certs as cert_check_certs
 from .cert import records_from_json as cert_records_from_json
 from .cert import to_markdown as cert_to_markdown
@@ -177,6 +180,23 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_trace_analyze(args: argparse.Namespace) -> int:
+    try:
+        with open(args.spans) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.spans}: {exc}", file=sys.stderr)
+        return 2
+    spans = trace_spans_from_json(data)
+    if args.trace_id:
+        spans = [span for span in spans if span.trace_id == args.trace_id]
+    if not spans:
+        print("error: no spans found", file=sys.stderr)
+        return 2
+    print(trace_to_markdown(spans))
+    return 1 if trace_error_spans(spans) else 0
 
 
 def cmd_cert_check(args: argparse.Namespace) -> int:
@@ -1186,6 +1206,20 @@ def build_parser() -> argparse.ArgumentParser:
     cert_check.add_argument("--warn-days", type=int, default=30)
     cert_check.add_argument("--critical-days", type=int, default=7)
     cert_check.set_defaults(func=cmd_cert_check)
+
+    trace = sub.add_parser("trace", help="Analyze distributed traces.")
+    trace_sub = trace.add_subparsers(dest="trace_command", required=True)
+
+    trace_analyze = trace_sub.add_parser(
+        "analyze", help="Critical path and error spans from a JSON list of spans."
+    )
+    trace_analyze.add_argument(
+        "--spans", required=True,
+        help="JSON file: list of {trace_id, span_id, parent_id, service, "
+             "operation, start_ms, duration_ms, status}.",
+    )
+    trace_analyze.add_argument("--trace-id", default=None, help="Filter to one trace.")
+    trace_analyze.set_defaults(func=cmd_trace_analyze)
     return parser
 
 
