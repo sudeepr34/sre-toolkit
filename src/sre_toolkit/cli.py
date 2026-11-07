@@ -24,6 +24,11 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .secrets import attention_needed as secrets_attention_needed
+from .secrets import audit_issues as secrets_audit_issues
+from .secrets import check_secrets as secrets_check_secrets
+from .secrets import records_from_json as secrets_records_from_json
+from .secrets import to_markdown as secrets_to_markdown
 from .sla import check_sla as sla_check_sla
 from .sla import records_from_json as sla_records_from_json
 from .sla import to_markdown as sla_to_markdown
@@ -188,6 +193,22 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_secrets_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.secrets) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.secrets}: {exc}", file=sys.stderr)
+        return 2
+    today = date.fromisoformat(args.today) if args.today else date.today()
+    results = secrets_check_secrets(
+        secrets_records_from_json(data), today, due_soon_days=args.due_soon_days
+    )
+    issues = secrets_audit_issues(results)
+    print(secrets_to_markdown(results, issues))
+    return 1 if secrets_attention_needed(results) else 0
 
 
 def cmd_sla_check(args: argparse.Namespace) -> int:
@@ -1296,6 +1317,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sla_check.add_argument("--window-days", type=int, default=30)
     sla_check.set_defaults(func=cmd_sla_check)
+
+    secrets = sub.add_parser("secrets", help="Audit secrets rotation.")
+    secrets_sub = secrets.add_subparsers(dest="secrets_command", required=True)
+
+    secrets_audit = secrets_sub.add_parser(
+        "audit", help="Audit rotation metadata from a JSON file."
+    )
+    secrets_audit.add_argument(
+        "--secrets", required=True,
+        help="JSON file: list of {name, last_rotated, rotation_days, owner}.",
+    )
+    secrets_audit.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
+    secrets_audit.add_argument("--due-soon-days", type=int, default=7)
+    secrets_audit.set_defaults(func=cmd_secrets_audit)
     return parser
 
 

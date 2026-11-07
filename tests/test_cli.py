@@ -1037,3 +1037,38 @@ def test_sla_check_missing_file_errors(tmp_path, capsys):
     rc = main(["sla", "check", "--sla", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_secrets_audit_ok_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "secrets.json"
+    path.write_text(_json.dumps([
+        {"name": "db-password", "last_rotated": "2026-10-01",
+         "rotation_days": 90, "owner": "sre"},
+    ]))
+    rc = main(["secrets", "audit", "--secrets", str(path), "--today", "2026-11-07"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Secrets checked: 1" in out
+    assert "- OK: 1" in out
+    assert "- Issues found: 0" in out
+
+
+def test_secrets_audit_overdue_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "secrets.json"
+    path.write_text(_json.dumps([
+        {"name": "api-key", "last_rotated": "2026-07-01",
+         "rotation_days": 90, "owner": "sre"},
+    ]))
+    rc = main(["secrets", "audit", "--secrets", str(path), "--today", "2026-11-07"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Overdue: 1" in out
+    assert "| api-key | overdue | overdue by 39 days |" in out
+
+
+def test_secrets_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["secrets", "audit", "--secrets", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

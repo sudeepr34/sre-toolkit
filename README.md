@@ -126,6 +126,9 @@ sre-toolkit dns check api.example.com db.example.com
 
 # SLA availability: uptime vs target, error budget left in minutes
 sre-toolkit sla check --sla sla.json
+
+# Secrets rotation audit: overdue / due soon / unknown (metadata only)
+sre-toolkit secrets audit --secrets secrets.json
 ```
 
 Example output:
@@ -179,6 +182,7 @@ top errors:
 - [x] Feature flag audit: stale enabled flags + missing owners (`flags` command)
 - [x] DNS resolution: which hostnames resolve, which fail (`dns` command)
 - [x] SLA availability: uptime vs target, error budget left in minutes (`sla` command)
+- [x] Secrets rotation audit: overdue / due soon / unknown (`secrets` command)
 
 ## Development
 
