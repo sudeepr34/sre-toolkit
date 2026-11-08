@@ -1072,3 +1072,38 @@ def test_secrets_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["secrets", "audit", "--secrets", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_rollback_check_ready_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "deploys.json"
+    path.write_text(_json.dumps([
+        {"service": "api", "version": "v2.1.0", "previous_version": "v2.0.9",
+         "rollback_runbook": "https://runbooks/rollback-api",
+         "rollback_tested": True},
+    ]))
+    rc = main(["rollback", "check", "--deploys", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Deploys checked: 1" in out
+    assert "All deploys are rollback-ready" in out
+
+
+def test_rollback_check_issues_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "deploys.json"
+    path.write_text(_json.dumps([
+        {"service": "api", "version": "v2.1.0", "previous_version": "",
+         "rollback_runbook": "", "rollback_tested": False},
+    ]))
+    rc = main(["rollback", "check", "--deploys", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Issues found: 3" in out
+    assert "| api | v2.1.0 | untested | rollback never tested |" in out
+
+
+def test_rollback_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["rollback", "check", "--deploys", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

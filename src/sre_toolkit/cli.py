@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .rollback import check_rollback as rollback_check_rollback
+from .rollback import records_from_json as rollback_records_from_json
+from .rollback import to_markdown as rollback_to_markdown
 from .secrets import attention_needed as secrets_attention_needed
 from .secrets import audit_issues as secrets_audit_issues
 from .secrets import check_secrets as secrets_check_secrets
@@ -193,6 +196,19 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_rollback_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.deploys) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.deploys}: {exc}", file=sys.stderr)
+        return 2
+    deploys = rollback_records_from_json(data)
+    issues = rollback_check_rollback(deploys)
+    print(rollback_to_markdown(deploys, issues))
+    return 1 if issues else 0
 
 
 def cmd_secrets_audit(args: argparse.Namespace) -> int:
@@ -1331,6 +1347,19 @@ def build_parser() -> argparse.ArgumentParser:
     secrets_audit.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
     secrets_audit.add_argument("--due-soon-days", type=int, default=7)
     secrets_audit.set_defaults(func=cmd_secrets_audit)
+
+    rollback = sub.add_parser("rollback", help="Check rollback readiness.")
+    rollback_sub = rollback.add_subparsers(dest="rollback_command", required=True)
+
+    rollback_check = rollback_sub.add_parser(
+        "check", help="Check deploys for rollback readiness from a JSON file."
+    )
+    rollback_check.add_argument(
+        "--deploys", required=True,
+        help="JSON file: list of {service, version, previous_version, "
+             "rollback_runbook, rollback_tested}.",
+    )
+    rollback_check.set_defaults(func=cmd_rollback_check)
     return parser
 
 

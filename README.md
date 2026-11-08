@@ -129,6 +129,9 @@ sre-toolkit sla check --sla sla.json
 
 # Secrets rotation audit: overdue / due soon / unknown (metadata only)
 sre-toolkit secrets audit --secrets secrets.json
+
+# Rollback readiness: previous version, runbook, tested rollback
+sre-toolkit rollback check --deploys deploys.json
 ```
 
 Example output:
@@ -183,6 +186,7 @@ top errors:
 - [x] DNS resolution: which hostnames resolve, which fail (`dns` command)
 - [x] SLA availability: uptime vs target, error budget left in minutes (`sla` command)
 - [x] Secrets rotation audit: overdue / due soon / unknown (`secrets` command)
+- [x] Rollback readiness: previous version, runbook, tested rollback (`rollback` command)
 
 ## Development
 
