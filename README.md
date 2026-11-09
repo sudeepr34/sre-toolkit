@@ -132,6 +132,9 @@ sre-toolkit secrets audit --secrets secrets.json
 
 # Rollback readiness: previous version, runbook, tested rollback
 sre-toolkit rollback check --deploys deploys.json
+
+# Event correlation: bursts per service + windows where services fire together
+sre-toolkit events correlate --events events.json
 ```
 
 Example output:
@@ -187,6 +190,7 @@ top errors:
 - [x] SLA availability: uptime vs target, error budget left in minutes (`sla` command)
 - [x] Secrets rotation audit: overdue / due soon / unknown (`secrets` command)
 - [x] Rollback readiness: previous version, runbook, tested rollback (`rollback` command)
+- [x] Event correlation: bursts per service + windows where services fire together (`events` command)
 
 ## Development
 

@@ -24,6 +24,10 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .events import events_from_json as events_events_from_json
+from .events import find_bursts as events_find_bursts
+from .events import find_correlated as events_find_correlated
+from .events import to_markdown as events_to_markdown
 from .rollback import check_rollback as rollback_check_rollback
 from .rollback import records_from_json as rollback_records_from_json
 from .rollback import to_markdown as rollback_to_markdown
@@ -196,6 +200,23 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_events_correlate(args: argparse.Namespace) -> int:
+    try:
+        with open(args.events) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.events}: {exc}", file=sys.stderr)
+        return 2
+    events = events_events_from_json(data)
+    bursts = events_find_bursts(
+        events, window_minutes=args.window_minutes,
+        threshold=args.burst_threshold,
+    )
+    correlated = events_find_correlated(events, window_minutes=args.window_minutes)
+    print(events_to_markdown(bursts, correlated, args.window_minutes))
+    return 1 if bursts or correlated else 0
 
 
 def cmd_rollback_check(args: argparse.Namespace) -> int:
@@ -1360,6 +1381,20 @@ def build_parser() -> argparse.ArgumentParser:
              "rollback_runbook, rollback_tested}.",
     )
     rollback_check.set_defaults(func=cmd_rollback_check)
+
+    events = sub.add_parser("events", help="Correlate events.")
+    events_sub = events.add_subparsers(dest="events_command", required=True)
+
+    events_correlate = events_sub.add_parser(
+        "correlate", help="Find bursts and correlated windows from a JSON file."
+    )
+    events_correlate.add_argument(
+        "--events", required=True,
+        help="JSON file: list of {service, timestamp, severity, message}.",
+    )
+    events_correlate.add_argument("--window-minutes", type=int, default=15)
+    events_correlate.add_argument("--burst-threshold", type=int, default=5)
+    events_correlate.set_defaults(func=cmd_events_correlate)
     return parser
 
 

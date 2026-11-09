@@ -1107,3 +1107,40 @@ def test_rollback_check_missing_file_errors(tmp_path, capsys):
     rc = main(["rollback", "check", "--deploys", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_events_correlate_burst_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "events.json"
+    path.write_text(_json.dumps([
+        {"service": "api", "timestamp": f"2026-11-10T10:{m:02d}:00",
+         "severity": "error", "message": "fail"}
+        for m in range(5)
+    ] + [
+        {"service": "db", "timestamp": "2026-11-10T10:05:00",
+         "severity": "error", "message": "fail"},
+    ]))
+    rc = main(["events", "correlate", "--events", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Bursts found: 1" in out
+    assert "- Correlated windows: 1" in out
+    assert "| api | 2026-11-10T10:00:00 | 5 |" in out
+
+
+def test_events_correlate_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "events.json"
+    path.write_text(_json.dumps([
+        {"service": "api", "timestamp": "2026-11-10T10:00:00"},
+        {"service": "api", "timestamp": "2026-11-10T11:00:00"},
+    ]))
+    rc = main(["events", "correlate", "--events", str(path)])
+    assert rc == 0
+    assert "No bursts or correlated windows found." in capsys.readouterr().out
+
+
+def test_events_correlate_missing_file_errors(tmp_path, capsys):
+    rc = main(["events", "correlate", "--events", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
