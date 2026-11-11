@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .maintenance import check_window as maintenance_check_window
+from .maintenance import freezes_from_json as maintenance_freezes_from_json
+from .maintenance import to_markdown as maintenance_to_markdown
 from .schedule import coverage_pct as schedule_coverage_pct
 from .schedule import find_gaps as schedule_find_gaps
 from .schedule import shifts_from_json as schedule_shifts_from_json
@@ -210,6 +213,21 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_maintenance_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.freezes) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.freezes}: {exc}", file=sys.stderr)
+        return 2
+    conflicts = maintenance_check_window(
+        args.service, args.start, args.end,
+        maintenance_freezes_from_json(data),
+    )
+    print(maintenance_to_markdown(args.service, args.start, args.end, conflicts))
+    return 1 if conflicts else 0
 
 
 def cmd_schedule_coverage(args: argparse.Namespace) -> int:
@@ -1489,6 +1507,21 @@ def build_parser() -> argparse.ArgumentParser:
     schedule_coverage.add_argument("--since", required=True, help="Range start, YYYY-MM-DD.")
     schedule_coverage.add_argument("--until", required=True, help="Range end, YYYY-MM-DD.")
     schedule_coverage.set_defaults(func=cmd_schedule_coverage)
+
+    maintenance = sub.add_parser("maintenance", help="Check maintenance windows.")
+    maintenance_sub = maintenance.add_subparsers(dest="maintenance_command", required=True)
+
+    maintenance_check = maintenance_sub.add_parser(
+        "check", help="Check a window against freeze windows from a JSON file."
+    )
+    maintenance_check.add_argument("--service", required=True)
+    maintenance_check.add_argument("--start", required=True, help="Window start, ISO datetime.")
+    maintenance_check.add_argument("--end", required=True, help="Window end, ISO datetime.")
+    maintenance_check.add_argument(
+        "--freezes", required=True,
+        help="JSON file: list of {name, start, end, reason}.",
+    )
+    maintenance_check.set_defaults(func=cmd_maintenance_check)
     return parser
 
 

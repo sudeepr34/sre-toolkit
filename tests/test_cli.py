@@ -1251,3 +1251,41 @@ def test_schedule_coverage_missing_file_errors(tmp_path, capsys):
                "--since", "2026-11-01", "--until", "2026-11-30"])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def _freezes_json():
+    import json as _json
+    return _json.dumps([
+        {"name": "black-friday", "start": "2026-11-27T00:00:00",
+         "end": "2026-11-30T23:59:59", "reason": "peak traffic"},
+    ])
+
+
+def test_maintenance_check_clear_exit_0(tmp_path, capsys):
+    path = tmp_path / "freezes.json"
+    path.write_text(_freezes_json())
+    rc = main(["maintenance", "check", "--service", "api",
+               "--start", "2026-11-12T02:00:00", "--end", "2026-11-12T04:00:00",
+               "--freezes", str(path)])
+    assert rc == 0
+    assert "Clear: the window does not overlap any freeze." in capsys.readouterr().out
+
+
+def test_maintenance_check_conflict_exit_1(tmp_path, capsys):
+    path = tmp_path / "freezes.json"
+    path.write_text(_freezes_json())
+    rc = main(["maintenance", "check", "--service", "api",
+               "--start", "2026-11-28T02:00:00", "--end", "2026-11-28T04:00:00",
+               "--freezes", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Conflicts found: 1" in out
+    assert "| black-friday | peak traffic |" in out
+
+
+def test_maintenance_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["maintenance", "check", "--service", "api",
+               "--start", "2026-11-12T02:00:00", "--end", "2026-11-12T04:00:00",
+               "--freezes", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

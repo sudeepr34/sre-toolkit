@@ -144,6 +144,9 @@ sre-toolkit vuln triage --findings findings.json
 
 # On-call coverage: uncovered days in a date range
 sre-toolkit schedule coverage --shifts shifts.json --since 2026-11-01 --until 2026-11-30
+
+# Maintenance window check: conflicts with change freezes
+sre-toolkit maintenance check --service api --start 2026-11-28T02:00:00 --end 2026-11-28T04:00:00 --freezes freezes.json
 ```
 
 Example output:
@@ -203,6 +206,7 @@ top errors:
 - [x] Change collision detection: overlapping changes on the same service (`change` command)
 - [x] Vulnerability triage: overdue / due-soon findings vs severity SLAs (`vuln` command)
 - [x] On-call coverage: uncovered days in a date range (`schedule` command)
+- [x] Maintenance window check: conflicts with change freezes (`maintenance` command)
 
 ## Development
 
