@@ -138,6 +138,9 @@ sre-toolkit events correlate --events events.json
 
 # Change collision detection: overlapping changes on the same service
 sre-toolkit change check --changes changes.json
+
+# Vulnerability triage: overdue / due-soon findings vs severity SLAs
+sre-toolkit vuln triage --findings findings.json
 ```
 
 Example output:
@@ -195,6 +198,7 @@ top errors:
 - [x] Rollback readiness: previous version, runbook, tested rollback (`rollback` command)
 - [x] Event correlation: bursts per service + windows where services fire together (`events` command)
 - [x] Change collision detection: overlapping changes on the same service (`change` command)
+- [x] Vulnerability triage: overdue / due-soon findings vs severity SLAs (`vuln` command)
 
 ## Development
 

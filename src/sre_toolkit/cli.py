@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .vuln import check_vulns as vuln_check_vulns
+from .vuln import findings_from_json as vuln_findings_from_json
+from .vuln import to_markdown as vuln_to_markdown
 from .change import changes_from_json as change_changes_from_json
 from .change import find_collisions as change_find_collisions
 from .change import to_markdown as change_to_markdown
@@ -203,6 +206,19 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_vuln_triage(args: argparse.Namespace) -> int:
+    try:
+        with open(args.findings) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.findings}: {exc}", file=sys.stderr)
+        return 2
+    today = date.fromisoformat(args.today) if args.today else date.today()
+    results = vuln_check_vulns(vuln_findings_from_json(data), today)
+    print(vuln_to_markdown(results))
+    return 1 if any(r.status in ("overdue", "unknown") for r in results) else 0
 
 
 def cmd_change_check(args: argparse.Namespace) -> int:
@@ -1423,6 +1439,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {id, service, start, end, owner}.",
     )
     change_check.set_defaults(func=cmd_change_check)
+
+    vuln = sub.add_parser("vuln", help="Triage vulnerability findings.")
+    vuln_sub = vuln.add_subparsers(dest="vuln_command", required=True)
+
+    vuln_triage = vuln_sub.add_parser(
+        "triage", help="Triage findings against severity SLAs from a JSON file."
+    )
+    vuln_triage.add_argument(
+        "--findings", required=True,
+        help="JSON file: list of {id, severity, service, discovered, sla_days}.",
+    )
+    vuln_triage.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
+    vuln_triage.set_defaults(func=cmd_vuln_triage)
     return parser
 
 

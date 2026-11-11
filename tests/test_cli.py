@@ -1180,3 +1180,37 @@ def test_change_check_missing_file_errors(tmp_path, capsys):
     rc = main(["change", "check", "--changes", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_vuln_triage_ok_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "findings.json"
+    path.write_text(_json.dumps([
+        {"id": "CVE-2026-0001", "severity": "high", "service": "api",
+         "discovered": "2026-10-20"},
+    ]))
+    rc = main(["vuln", "triage", "--findings", str(path), "--today", "2026-11-11"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Findings checked: 1" in out
+    assert "- Overdue: 0" in out
+
+
+def test_vuln_triage_overdue_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "findings.json"
+    path.write_text(_json.dumps([
+        {"id": "CVE-2026-0001", "severity": "critical", "service": "api",
+         "discovered": "2026-10-20"},
+    ]))
+    rc = main(["vuln", "triage", "--findings", str(path), "--today", "2026-11-11"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Overdue: 1" in out
+    assert "| CVE-2026-0001 | critical | api | 22 | 7 | overdue |" in out
+
+
+def test_vuln_triage_missing_file_errors(tmp_path, capsys):
+    rc = main(["vuln", "triage", "--findings", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
