@@ -1214,3 +1214,40 @@ def test_vuln_triage_missing_file_errors(tmp_path, capsys):
     rc = main(["vuln", "triage", "--findings", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_schedule_coverage_full_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "shifts.json"
+    path.write_text(_json.dumps([
+        {"person": "a", "start": "2026-11-01", "end": "2026-11-15"},
+        {"person": "b", "start": "2026-11-16", "end": "2026-11-30"},
+    ]))
+    rc = main(["schedule", "coverage", "--shifts", str(path),
+               "--since", "2026-11-01", "--until", "2026-11-30"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Coverage: 100.0%" in out
+    assert "Full coverage" in out
+
+
+def test_schedule_coverage_gap_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "shifts.json"
+    path.write_text(_json.dumps([
+        {"person": "a", "start": "2026-11-01", "end": "2026-11-10"},
+        {"person": "b", "start": "2026-11-15", "end": "2026-11-30"},
+    ]))
+    rc = main(["schedule", "coverage", "--shifts", str(path),
+               "--since", "2026-11-01", "--until", "2026-11-30"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Gaps found: 1" in out
+    assert "| 2026-11-11 | 2026-11-14 | 4 |" in out
+
+
+def test_schedule_coverage_missing_file_errors(tmp_path, capsys):
+    rc = main(["schedule", "coverage", "--shifts", str(tmp_path / "nope.json"),
+               "--since", "2026-11-01", "--until", "2026-11-30"])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

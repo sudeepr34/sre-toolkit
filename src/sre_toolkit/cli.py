@@ -24,6 +24,10 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .schedule import coverage_pct as schedule_coverage_pct
+from .schedule import find_gaps as schedule_find_gaps
+from .schedule import shifts_from_json as schedule_shifts_from_json
+from .schedule import to_markdown as schedule_to_markdown
 from .vuln import check_vulns as vuln_check_vulns
 from .vuln import findings_from_json as vuln_findings_from_json
 from .vuln import to_markdown as vuln_to_markdown
@@ -206,6 +210,25 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_schedule_coverage(args: argparse.Namespace) -> int:
+    try:
+        with open(args.shifts) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.shifts}: {exc}", file=sys.stderr)
+        return 2
+    try:
+        start = date.fromisoformat(args.since)
+        end = date.fromisoformat(args.until)
+    except ValueError as exc:
+        print(f"error: bad date: {exc}", file=sys.stderr)
+        return 2
+    shifts = schedule_shifts_from_json(data)
+    gaps = schedule_find_gaps(shifts, start, end)
+    print(schedule_to_markdown(shifts, gaps, start, end))
+    return 1 if gaps else 0
 
 
 def cmd_vuln_triage(args: argparse.Namespace) -> int:
@@ -1452,6 +1475,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     vuln_triage.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
     vuln_triage.set_defaults(func=cmd_vuln_triage)
+
+    schedule = sub.add_parser("schedule", help="Check on-call coverage.")
+    schedule_sub = schedule.add_subparsers(dest="schedule_command", required=True)
+
+    schedule_coverage = schedule_sub.add_parser(
+        "coverage", help="Find uncovered days from a JSON list of shifts."
+    )
+    schedule_coverage.add_argument(
+        "--shifts", required=True,
+        help="JSON file: list of {person, start, end}.",
+    )
+    schedule_coverage.add_argument("--since", required=True, help="Range start, YYYY-MM-DD.")
+    schedule_coverage.add_argument("--until", required=True, help="Range end, YYYY-MM-DD.")
+    schedule_coverage.set_defaults(func=cmd_schedule_coverage)
     return parser
 
 
