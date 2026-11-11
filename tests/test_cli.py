@@ -1289,3 +1289,36 @@ def test_maintenance_check_missing_file_errors(tmp_path, capsys):
                "--freezes", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_pods_check_ok_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "pods.json"
+    path.write_text(_json.dumps([
+        {"name": "api-abc", "namespace": "prod", "restarts": 0, "age_hours": 48},
+        {"name": "api-def", "namespace": "prod", "restarts": 2, "age_hours": 48},
+    ]))
+    rc = main(["pods", "check", "--pods", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Pods checked: 2" in out
+    assert "- Critical: 0" in out
+
+
+def test_pods_check_critical_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "pods.json"
+    path.write_text(_json.dumps([
+        {"name": "api-abc", "namespace": "prod", "restarts": 12, "age_hours": 24},
+    ]))
+    rc = main(["pods", "check", "--pods", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Critical: 1" in out
+    assert "| api-abc | prod | 12 | 12.0 | critical |" in out
+
+
+def test_pods_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["pods", "check", "--pods", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .pods import check_pods as pods_check_pods
+from .pods import pods_from_json as pods_pods_from_json
+from .pods import to_markdown as pods_to_markdown
 from .maintenance import check_window as maintenance_check_window
 from .maintenance import freezes_from_json as maintenance_freezes_from_json
 from .maintenance import to_markdown as maintenance_to_markdown
@@ -213,6 +216,18 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_pods_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.pods) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.pods}: {exc}", file=sys.stderr)
+        return 2
+    results = pods_check_pods(pods_pods_from_json(data), args.restart_threshold)
+    print(pods_to_markdown(results))
+    return 1 if any(r.status == "critical" for r in results) else 0
 
 
 def cmd_maintenance_check(args: argparse.Namespace) -> int:
@@ -1522,6 +1537,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {name, start, end, reason}.",
     )
     maintenance_check.set_defaults(func=cmd_maintenance_check)
+
+    pods = sub.add_parser("pods", help="Check pod restarts.")
+    pods_sub = pods.add_subparsers(dest="pods_command", required=True)
+
+    pods_check = pods_sub.add_parser(
+        "check", help="Flag crash-looping pods from a JSON file."
+    )
+    pods_check.add_argument(
+        "--pods", required=True,
+        help="JSON file: list of {name, namespace, restarts, age_hours}.",
+    )
+    pods_check.add_argument("--restart-threshold", type=int, default=5)
+    pods_check.set_defaults(func=cmd_pods_check)
     return parser
 
 

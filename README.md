@@ -147,6 +147,9 @@ sre-toolkit schedule coverage --shifts shifts.json --since 2026-11-01 --until 20
 
 # Maintenance window check: conflicts with change freezes
 sre-toolkit maintenance check --service api --start 2026-11-28T02:00:00 --end 2026-11-28T04:00:00 --freezes freezes.json
+
+# Pod restart analysis: crash-looping pods by restart count
+sre-toolkit pods check --pods pods.json
 ```
 
 Example output:
@@ -207,6 +210,7 @@ top errors:
 - [x] Vulnerability triage: overdue / due-soon findings vs severity SLAs (`vuln` command)
 - [x] On-call coverage: uncovered days in a date range (`schedule` command)
 - [x] Maintenance window check: conflicts with change freezes (`maintenance` command)
+- [x] Pod restart analysis: crash-looping pods by restart count (`pods` command)
 
 ## Development
 
