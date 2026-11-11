@@ -1144,3 +1144,39 @@ def test_events_correlate_missing_file_errors(tmp_path, capsys):
     rc = main(["events", "correlate", "--events", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_change_check_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "changes.json"
+    path.write_text(_json.dumps([
+        {"id": "c1", "service": "api",
+         "start": "2026-11-12T02:00:00", "end": "2026-11-12T04:00:00"},
+        {"id": "c2", "service": "db",
+         "start": "2026-11-12T03:00:00", "end": "2026-11-12T05:00:00"},
+    ]))
+    rc = main(["change", "check", "--changes", str(path)])
+    assert rc == 0
+    assert "No collisions" in capsys.readouterr().out
+
+
+def test_change_check_collision_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "changes.json"
+    path.write_text(_json.dumps([
+        {"id": "c1", "service": "api",
+         "start": "2026-11-12T02:00:00", "end": "2026-11-12T04:00:00"},
+        {"id": "c2", "service": "api",
+         "start": "2026-11-12T03:00:00", "end": "2026-11-12T05:00:00"},
+    ]))
+    rc = main(["change", "check", "--changes", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Collisions found: 1" in out
+    assert "| api | c1 | c2 |" in out
+
+
+def test_change_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["change", "check", "--changes", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

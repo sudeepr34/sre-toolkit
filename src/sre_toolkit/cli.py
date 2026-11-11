@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .change import changes_from_json as change_changes_from_json
+from .change import find_collisions as change_find_collisions
+from .change import to_markdown as change_to_markdown
 from .events import events_from_json as events_events_from_json
 from .events import find_bursts as events_find_bursts
 from .events import find_correlated as events_find_correlated
@@ -200,6 +203,19 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_change_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.changes) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.changes}: {exc}", file=sys.stderr)
+        return 2
+    changes = change_changes_from_json(data)
+    collisions = change_find_collisions(changes)
+    print(change_to_markdown(changes, collisions))
+    return 1 if collisions else 0
 
 
 def cmd_events_correlate(args: argparse.Namespace) -> int:
@@ -1395,6 +1411,18 @@ def build_parser() -> argparse.ArgumentParser:
     events_correlate.add_argument("--window-minutes", type=int, default=15)
     events_correlate.add_argument("--burst-threshold", type=int, default=5)
     events_correlate.set_defaults(func=cmd_events_correlate)
+
+    change = sub.add_parser("change", help="Check change collisions.")
+    change_sub = change.add_subparsers(dest="change_command", required=True)
+
+    change_check = change_sub.add_parser(
+        "check", help="Find overlapping changes from a JSON file."
+    )
+    change_check.add_argument(
+        "--changes", required=True,
+        help="JSON file: list of {id, service, start, end, owner}.",
+    )
+    change_check.set_defaults(func=cmd_change_check)
     return parser
 
 
