@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .inventory import check_hosts as inventory_check_hosts
+from .inventory import hosts_from_json as inventory_hosts_from_json
+from .inventory import to_markdown as inventory_to_markdown
 from .pods import check_pods as pods_check_pods
 from .pods import pods_from_json as pods_pods_from_json
 from .pods import to_markdown as pods_to_markdown
@@ -216,6 +219,21 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_inventory_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.hosts) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.hosts}: {exc}", file=sys.stderr)
+        return 2
+    today = date.fromisoformat(args.today) if args.today else date.today()
+    results = inventory_check_hosts(
+        inventory_hosts_from_json(data), today, args.patch_days
+    )
+    print(inventory_to_markdown(results))
+    return 1 if any(r.issues for r in results) else 0
 
 
 def cmd_pods_check(args: argparse.Namespace) -> int:
@@ -1550,6 +1568,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     pods_check.add_argument("--restart-threshold", type=int, default=5)
     pods_check.set_defaults(func=cmd_pods_check)
+
+    inventory = sub.add_parser("inventory", help="Audit host inventory.")
+    inventory_sub = inventory.add_subparsers(dest="inventory_command", required=True)
+
+    inventory_audit = inventory_sub.add_parser(
+        "audit", help="Audit hosts from a JSON file."
+    )
+    inventory_audit.add_argument(
+        "--hosts", required=True,
+        help="JSON file: list of {name, owner, environment, patched, last_patched}.",
+    )
+    inventory_audit.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
+    inventory_audit.add_argument("--patch-days", type=int, default=30)
+    inventory_audit.set_defaults(func=cmd_inventory_audit)
     return parser
 
 

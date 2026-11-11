@@ -150,6 +150,9 @@ sre-toolkit maintenance check --service api --start 2026-11-28T02:00:00 --end 20
 
 # Pod restart analysis: crash-looping pods by restart count
 sre-toolkit pods check --pods pods.json
+
+# Host inventory audit: missing owners, unknown environments, stale patches
+sre-toolkit inventory audit --hosts hosts.json
 ```
 
 Example output:
@@ -211,6 +214,7 @@ top errors:
 - [x] On-call coverage: uncovered days in a date range (`schedule` command)
 - [x] Maintenance window check: conflicts with change freezes (`maintenance` command)
 - [x] Pod restart analysis: crash-looping pods by restart count (`pods` command)
+- [x] Host inventory audit: missing owners, unknown environments, stale patches (`inventory` command)
 
 ## Development
 

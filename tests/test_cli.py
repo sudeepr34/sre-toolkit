@@ -1322,3 +1322,37 @@ def test_pods_check_missing_file_errors(tmp_path, capsys):
     rc = main(["pods", "check", "--pods", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_inventory_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "hosts.json"
+    path.write_text(_json.dumps([
+        {"name": "web-01", "owner": "sre", "environment": "prod",
+         "patched": True, "last_patched": "2026-11-01"},
+    ]))
+    rc = main(["inventory", "audit", "--hosts", str(path), "--today", "2026-11-11"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Hosts checked: 1" in out
+    assert "Hosts with issues: 0" in out
+
+
+def test_inventory_audit_issues_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "hosts.json"
+    path.write_text(_json.dumps([
+        {"name": "db-01", "owner": "", "environment": "prod",
+         "patched": False, "last_patched": ""},
+    ]))
+    rc = main(["inventory", "audit", "--hosts", str(path), "--today", "2026-11-11"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Hosts with issues: 1" in out
+    assert "| db-01 | prod | — | missing owner, unpatched |" in out
+
+
+def test_inventory_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["inventory", "audit", "--hosts", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
