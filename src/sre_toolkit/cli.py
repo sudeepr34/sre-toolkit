@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .releases import check_releases as releases_check_releases
+from .releases import releases_from_json as releases_releases_from_json
+from .releases import to_markdown as releases_to_markdown
 from .inventory import check_hosts as inventory_check_hosts
 from .inventory import hosts_from_json as inventory_hosts_from_json
 from .inventory import to_markdown as inventory_to_markdown
@@ -219,6 +222,21 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_releases_cadence(args: argparse.Namespace) -> int:
+    try:
+        with open(args.releases) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.releases}: {exc}", file=sys.stderr)
+        return 2
+    today = date.fromisoformat(args.today) if args.today else date.today()
+    results = releases_check_releases(
+        releases_releases_from_json(data), today, args.stale_days
+    )
+    print(releases_to_markdown(results))
+    return 1 if any(r.stale for r in results) else 0
 
 
 def cmd_inventory_audit(args: argparse.Namespace) -> int:
@@ -1582,6 +1600,20 @@ def build_parser() -> argparse.ArgumentParser:
     inventory_audit.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
     inventory_audit.add_argument("--patch-days", type=int, default=30)
     inventory_audit.set_defaults(func=cmd_inventory_audit)
+
+    releases = sub.add_parser("releases", help="Check release cadence.")
+    releases_sub = releases.add_subparsers(dest="releases_command", required=True)
+
+    releases_cadence = releases_sub.add_parser(
+        "cadence", help="Report days since the last release per service."
+    )
+    releases_cadence.add_argument(
+        "--releases", required=True,
+        help="JSON file: list of {version, service, date}.",
+    )
+    releases_cadence.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
+    releases_cadence.add_argument("--stale-days", type=int, default=30)
+    releases_cadence.set_defaults(func=cmd_releases_cadence)
     return parser
 
 

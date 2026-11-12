@@ -1356,3 +1356,35 @@ def test_inventory_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["inventory", "audit", "--hosts", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_releases_cadence_fresh_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "releases.json"
+    path.write_text(_json.dumps([
+        {"version": "v1.4.2", "service": "api", "date": "2026-11-10"},
+    ]))
+    rc = main(["releases", "cadence", "--releases", str(path), "--today", "2026-11-12"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Services checked: 1" in out
+    assert "Stale services: 0" in out
+
+
+def test_releases_cadence_stale_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "releases.json"
+    path.write_text(_json.dumps([
+        {"version": "v1.0.0", "service": "api", "date": "2026-09-01"},
+    ]))
+    rc = main(["releases", "cadence", "--releases", str(path), "--today", "2026-11-12"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Stale services: 1" in out
+    assert "| api | v1.0.0 | 2026-09-01 | 72 | yes |" in out
+
+
+def test_releases_cadence_missing_file_errors(tmp_path, capsys):
+    rc = main(["releases", "cadence", "--releases", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

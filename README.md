@@ -153,6 +153,9 @@ sre-toolkit pods check --pods pods.json
 
 # Host inventory audit: missing owners, unknown environments, stale patches
 sre-toolkit inventory audit --hosts hosts.json
+
+# Release cadence: days since the last release per service
+sre-toolkit releases cadence --releases releases.json
 ```
 
 Example output:
@@ -215,6 +218,7 @@ top errors:
 - [x] Maintenance window check: conflicts with change freezes (`maintenance` command)
 - [x] Pod restart analysis: crash-looping pods by restart count (`pods` command)
 - [x] Host inventory audit: missing owners, unknown environments, stale patches (`inventory` command)
+- [x] Release cadence: days since the last release per service (`releases` command)
 
 ## Development
 
