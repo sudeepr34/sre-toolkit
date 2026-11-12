@@ -159,6 +159,9 @@ sre-toolkit releases cadence --releases releases.json
 
 # Migration status: pending, failed, and stale-pending migrations
 sre-toolkit migrations status --migrations migrations.json
+
+# Cluster node health: not-ready and over-committed nodes
+sre-toolkit nodes health --nodes nodes.json
 ```
 
 Example output:
@@ -223,6 +226,7 @@ top errors:
 - [x] Host inventory audit: missing owners, unknown environments, stale patches (`inventory` command)
 - [x] Release cadence: days since the last release per service (`releases` command)
 - [x] Migration status: pending, failed, and stale-pending migrations (`migrations` command)
+- [x] Cluster node health: not-ready and over-committed nodes (`nodes` command)
 
 ## Development
 

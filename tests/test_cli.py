@@ -1426,3 +1426,37 @@ def test_migrations_status_missing_file_errors(tmp_path, capsys):
     rc = main(["migrations", "status", "--migrations", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_nodes_health_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "nodes.json"
+    path.write_text(_json.dumps([
+        {"name": "node-1", "status": "ready", "cpu_capacity": 8,
+         "cpu_requested": 4, "memory_capacity": 32, "memory_requested": 16},
+    ]))
+    rc = main(["nodes", "health", "--nodes", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Nodes checked: 1" in out
+    assert "Nodes with issues: 0" in out
+
+
+def test_nodes_health_issues_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "nodes.json"
+    path.write_text(_json.dumps([
+        {"name": "node-1", "status": "notready", "cpu_capacity": 8,
+         "cpu_requested": 9, "memory_capacity": 32, "memory_requested": 16},
+    ]))
+    rc = main(["nodes", "health", "--nodes", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Nodes with issues: 1" in out
+    assert "| node-1 | notready | 112.5 | 50.0 | not ready, cpu over-committed |" in out
+
+
+def test_nodes_health_missing_file_errors(tmp_path, capsys):
+    rc = main(["nodes", "health", "--nodes", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

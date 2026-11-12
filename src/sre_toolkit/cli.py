@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .nodes import check_nodes as nodes_check_nodes
+from .nodes import nodes_from_json as nodes_nodes_from_json
+from .nodes import to_markdown as nodes_to_markdown
 from .migrations import check_migrations as migrations_check_migrations
 from .migrations import migrations_from_json as migrations_migrations_from_json
 from .migrations import to_markdown as migrations_to_markdown
@@ -225,6 +228,18 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_nodes_health(args: argparse.Namespace) -> int:
+    try:
+        with open(args.nodes) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.nodes}: {exc}", file=sys.stderr)
+        return 2
+    results = nodes_check_nodes(nodes_nodes_from_json(data), args.overcommit_pct)
+    print(nodes_to_markdown(results))
+    return 1 if any(r.issues for r in results) else 0
 
 
 def cmd_migrations_status(args: argparse.Namespace) -> int:
@@ -1648,6 +1663,19 @@ def build_parser() -> argparse.ArgumentParser:
     migrations_status.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
     migrations_status.add_argument("--stale-days", type=int, default=14)
     migrations_status.set_defaults(func=cmd_migrations_status)
+
+    nodes = sub.add_parser("nodes", help="Check cluster node health.")
+    nodes_sub = nodes.add_subparsers(dest="nodes_command", required=True)
+
+    nodes_health = nodes_sub.add_parser(
+        "health", help="Flag not-ready and over-committed nodes from a JSON file."
+    )
+    nodes_health.add_argument(
+        "--nodes", required=True,
+        help="JSON file: list of {name, status, cpu_capacity, cpu_requested, memory_capacity, memory_requested}.",
+    )
+    nodes_health.add_argument("--overcommit-pct", type=float, default=100.0)
+    nodes_health.set_defaults(func=cmd_nodes_health)
     return parser
 
 
