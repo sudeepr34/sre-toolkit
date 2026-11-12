@@ -156,6 +156,9 @@ sre-toolkit inventory audit --hosts hosts.json
 
 # Release cadence: days since the last release per service
 sre-toolkit releases cadence --releases releases.json
+
+# Migration status: pending, failed, and stale-pending migrations
+sre-toolkit migrations status --migrations migrations.json
 ```
 
 Example output:
@@ -219,6 +222,7 @@ top errors:
 - [x] Pod restart analysis: crash-looping pods by restart count (`pods` command)
 - [x] Host inventory audit: missing owners, unknown environments, stale patches (`inventory` command)
 - [x] Release cadence: days since the last release per service (`releases` command)
+- [x] Migration status: pending, failed, and stale-pending migrations (`migrations` command)
 
 ## Development
 

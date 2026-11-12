@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .migrations import check_migrations as migrations_check_migrations
+from .migrations import migrations_from_json as migrations_migrations_from_json
+from .migrations import to_markdown as migrations_to_markdown
 from .releases import check_releases as releases_check_releases
 from .releases import releases_from_json as releases_releases_from_json
 from .releases import to_markdown as releases_to_markdown
@@ -222,6 +225,23 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_migrations_status(args: argparse.Namespace) -> int:
+    try:
+        with open(args.migrations) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.migrations}: {exc}", file=sys.stderr)
+        return 2
+    today = date.fromisoformat(args.today) if args.today else date.today()
+    results = migrations_check_migrations(
+        migrations_migrations_from_json(data), today, args.stale_days
+    )
+    print(migrations_to_markdown(results))
+    return 1 if any(
+        r.migration.status.lower() in ("pending", "failed") for r in results
+    ) else 0
 
 
 def cmd_releases_cadence(args: argparse.Namespace) -> int:
@@ -1614,6 +1634,20 @@ def build_parser() -> argparse.ArgumentParser:
     releases_cadence.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
     releases_cadence.add_argument("--stale-days", type=int, default=30)
     releases_cadence.set_defaults(func=cmd_releases_cadence)
+
+    migrations = sub.add_parser("migrations", help="Check migration status.")
+    migrations_sub = migrations.add_subparsers(dest="migrations_command", required=True)
+
+    migrations_status = migrations_sub.add_parser(
+        "status", help="Report pending, failed, and stale migrations."
+    )
+    migrations_status.add_argument(
+        "--migrations", required=True,
+        help="JSON file: list of {id, service, status, created, applied_at}.",
+    )
+    migrations_status.add_argument("--today", default=None, help="Reference date, YYYY-MM-DD.")
+    migrations_status.add_argument("--stale-days", type=int, default=14)
+    migrations_status.set_defaults(func=cmd_migrations_status)
     return parser
 
 

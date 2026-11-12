@@ -1388,3 +1388,41 @@ def test_releases_cadence_missing_file_errors(tmp_path, capsys):
     rc = main(["releases", "cadence", "--releases", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_migrations_status_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "migrations.json"
+    path.write_text(_json.dumps([
+        {"id": "20261101001", "service": "api", "status": "applied",
+         "created": "2026-11-01", "applied_at": "2026-11-02"},
+    ]))
+    rc = main(["migrations", "status", "--migrations", str(path), "--today", "2026-11-12"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Migrations checked: 1" in out
+    assert "- Pending: 0" in out
+
+
+def test_migrations_status_pending_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "migrations.json"
+    path.write_text(_json.dumps([
+        {"id": "20261101001", "service": "api", "status": "pending",
+         "created": "2026-10-20"},
+        {"id": "20261101002", "service": "api", "status": "failed",
+         "created": "2026-11-01"},
+    ]))
+    rc = main(["migrations", "status", "--migrations", str(path), "--today", "2026-11-12"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Pending: 1" in out
+    assert "- Failed: 1" in out
+    assert "- Stale pending: 1" in out
+    assert "| 20261101001 | api | pending | 23 |" in out
+
+
+def test_migrations_status_missing_file_errors(tmp_path, capsys):
+    rc = main(["migrations", "status", "--migrations", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
