@@ -165,6 +165,9 @@ sre-toolkit nodes health --nodes nodes.json
 
 # Replica count audit: under-replicated and down deployments
 sre-toolkit replicas audit --deployments deployments.json
+
+# Namespace resource quota check: namespaces near their quotas
+sre-toolkit quota check --namespaces namespaces.json
 ```
 
 Example output:
@@ -231,6 +234,7 @@ top errors:
 - [x] Migration status: pending, failed, and stale-pending migrations (`migrations` command)
 - [x] Cluster node health: not-ready and over-committed nodes (`nodes` command)
 - [x] Replica count audit: under-replicated and down deployments (`replicas` command)
+- [x] Namespace resource quota check: namespaces near their quotas (`quota` command)
 
 ## Development
 

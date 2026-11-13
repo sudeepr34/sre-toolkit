@@ -1495,3 +1495,37 @@ def test_replicas_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["replicas", "audit", "--deployments", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_quota_check_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "namespaces.json"
+    path.write_text(_json.dumps([
+        {"name": "prod", "cpu_limit": 10, "cpu_used": 5,
+         "memory_limit": 64, "memory_used": 32},
+    ]))
+    rc = main(["quota", "check", "--namespaces", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Namespaces checked: 1" in out
+    assert "Namespaces over threshold: 0" in out
+
+
+def test_quota_check_over_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "namespaces.json"
+    path.write_text(_json.dumps([
+        {"name": "prod", "cpu_limit": 10, "cpu_used": 9.5,
+         "memory_limit": 64, "memory_used": 32},
+    ]))
+    rc = main(["quota", "check", "--namespaces", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Namespaces over threshold: 1" in out
+    assert "| prod | 95.0 | 50.0 | cpu at 95.0% |" in out
+
+
+def test_quota_check_missing_file_errors(tmp_path, capsys):
+    rc = main(["quota", "check", "--namespaces", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

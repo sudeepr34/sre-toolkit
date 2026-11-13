@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .quota import check_quotas as quota_check_quotas
+from .quota import namespaces_from_json as quota_namespaces_from_json
+from .quota import to_markdown as quota_to_markdown
 from .replicas import check_replicas as replicas_check_replicas
 from .replicas import deployments_from_json as replicas_deployments_from_json
 from .replicas import to_markdown as replicas_to_markdown
@@ -231,6 +234,20 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_quota_check(args: argparse.Namespace) -> int:
+    try:
+        with open(args.namespaces) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.namespaces}: {exc}", file=sys.stderr)
+        return 2
+    results = quota_check_quotas(
+        quota_namespaces_from_json(data), args.threshold_pct
+    )
+    print(quota_to_markdown(results))
+    return 1 if any(r.issues for r in results) else 0
 
 
 def cmd_replicas_audit(args: argparse.Namespace) -> int:
@@ -1703,6 +1720,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {name, namespace, desired, ready}.",
     )
     replicas_audit.set_defaults(func=cmd_replicas_audit)
+
+    quota = sub.add_parser("quota", help="Check namespace resource quotas.")
+    quota_sub = quota.add_subparsers(dest="quota_command", required=True)
+
+    quota_check = quota_sub.add_parser(
+        "check", help="Flag namespaces near their quotas from a JSON file."
+    )
+    quota_check.add_argument(
+        "--namespaces", required=True,
+        help="JSON file: list of {name, cpu_limit, cpu_used, memory_limit, memory_used}.",
+    )
+    quota_check.add_argument("--threshold-pct", type=float, default=90.0)
+    quota_check.set_defaults(func=cmd_quota_check)
     return parser
 
 
