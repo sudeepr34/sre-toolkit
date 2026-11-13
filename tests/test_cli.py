@@ -1529,3 +1529,37 @@ def test_quota_check_missing_file_errors(tmp_path, capsys):
     rc = main(["quota", "check", "--namespaces", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_pvc_usage_ok_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "volumes.json"
+    path.write_text(_json.dumps([
+        {"name": "data-pvc", "namespace": "prod", "capacity_gi": 100, "used_gi": 40},
+    ]))
+    rc = main(["pvc", "usage", "--volumes", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Volumes checked: 1" in out
+    assert "- Critical: 0" in out
+
+
+def test_pvc_usage_critical_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "volumes.json"
+    path.write_text(_json.dumps([
+        {"name": "data-pvc", "namespace": "prod", "capacity_gi": 100, "used_gi": 97},
+        {"name": "logs-pvc", "namespace": "prod", "capacity_gi": 50, "used_gi": 42},
+    ]))
+    rc = main(["pvc", "usage", "--volumes", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Critical: 1" in out
+    assert "- Warning: 1" in out
+    assert "| data-pvc | prod | 100 | 97 | 97.0 | critical |" in out
+
+
+def test_pvc_usage_missing_file_errors(tmp_path, capsys):
+    rc = main(["pvc", "usage", "--volumes", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

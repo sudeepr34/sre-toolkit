@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .pvc import check_volumes as pvc_check_volumes
+from .pvc import to_markdown as pvc_to_markdown
+from .pvc import volumes_from_json as pvc_volumes_from_json
 from .quota import check_quotas as quota_check_quotas
 from .quota import namespaces_from_json as quota_namespaces_from_json
 from .quota import to_markdown as quota_to_markdown
@@ -234,6 +237,20 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_pvc_usage(args: argparse.Namespace) -> int:
+    try:
+        with open(args.volumes) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.volumes}: {exc}", file=sys.stderr)
+        return 2
+    results = pvc_check_volumes(
+        pvc_volumes_from_json(data), args.warning_pct, args.critical_pct
+    )
+    print(pvc_to_markdown(results))
+    return 1 if any(r.status == "critical" for r in results) else 0
 
 
 def cmd_quota_check(args: argparse.Namespace) -> int:
@@ -1733,6 +1750,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     quota_check.add_argument("--threshold-pct", type=float, default=90.0)
     quota_check.set_defaults(func=cmd_quota_check)
+
+    pvc = sub.add_parser("pvc", help="Check persistent volume usage.")
+    pvc_sub = pvc.add_subparsers(dest="pvc_command", required=True)
+
+    pvc_usage = pvc_sub.add_parser(
+        "usage", help="Flag near-full volumes from a JSON file."
+    )
+    pvc_usage.add_argument(
+        "--volumes", required=True,
+        help="JSON file: list of {name, namespace, capacity_gi, used_gi}.",
+    )
+    pvc_usage.add_argument("--warning-pct", type=float, default=80.0)
+    pvc_usage.add_argument("--critical-pct", type=float, default=95.0)
+    pvc_usage.set_defaults(func=cmd_pvc_usage)
     return parser
 
 

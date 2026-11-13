@@ -168,6 +168,9 @@ sre-toolkit replicas audit --deployments deployments.json
 
 # Namespace resource quota check: namespaces near their quotas
 sre-toolkit quota check --namespaces namespaces.json
+
+# Persistent volume usage: near-full and full volumes
+sre-toolkit pvc usage --volumes volumes.json
 ```
 
 Example output:
@@ -235,6 +238,7 @@ top errors:
 - [x] Cluster node health: not-ready and over-committed nodes (`nodes` command)
 - [x] Replica count audit: under-replicated and down deployments (`replicas` command)
 - [x] Namespace resource quota check: namespaces near their quotas (`quota` command)
+- [x] Persistent volume usage: near-full and full volumes (`pvc` command)
 
 ## Development
 
