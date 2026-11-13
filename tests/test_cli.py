@@ -1460,3 +1460,38 @@ def test_nodes_health_missing_file_errors(tmp_path, capsys):
     rc = main(["nodes", "health", "--nodes", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_replicas_audit_ok_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "deployments.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "namespace": "prod", "desired": 3, "ready": 3},
+    ]))
+    rc = main(["replicas", "audit", "--deployments", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Deployments checked: 1" in out
+    assert "- Down: 0" in out
+
+
+def test_replicas_audit_degraded_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "deployments.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "namespace": "prod", "desired": 3, "ready": 2},
+        {"name": "web", "namespace": "prod", "desired": 2, "ready": 0},
+    ]))
+    rc = main(["replicas", "audit", "--deployments", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Degraded: 1" in out
+    assert "- Down: 1" in out
+    assert "| api | prod | 3 | 2 | 66.7 | degraded |" in out
+    assert "| web | prod | 2 | 0 | 0.0 | down |" in out
+
+
+def test_replicas_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["replicas", "audit", "--deployments", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

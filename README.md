@@ -162,6 +162,9 @@ sre-toolkit migrations status --migrations migrations.json
 
 # Cluster node health: not-ready and over-committed nodes
 sre-toolkit nodes health --nodes nodes.json
+
+# Replica count audit: under-replicated and down deployments
+sre-toolkit replicas audit --deployments deployments.json
 ```
 
 Example output:
@@ -227,6 +230,7 @@ top errors:
 - [x] Release cadence: days since the last release per service (`releases` command)
 - [x] Migration status: pending, failed, and stale-pending migrations (`migrations` command)
 - [x] Cluster node health: not-ready and over-committed nodes (`nodes` command)
+- [x] Replica count audit: under-replicated and down deployments (`replicas` command)
 
 ## Development
 

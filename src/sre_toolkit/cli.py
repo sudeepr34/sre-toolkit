@@ -24,6 +24,9 @@ from .cost import (
 )
 from .audit import diff_configs, to_markdown as audit_to_markdown
 from .canary import CanaryAnalysis
+from .replicas import check_replicas as replicas_check_replicas
+from .replicas import deployments_from_json as replicas_deployments_from_json
+from .replicas import to_markdown as replicas_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -228,6 +231,18 @@ def cmd_slo(args: argparse.Namespace) -> int:
         return 2
     print(assessment.to_markdown())
     return 0
+
+
+def cmd_replicas_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.deployments) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.deployments}: {exc}", file=sys.stderr)
+        return 2
+    results = replicas_check_replicas(replicas_deployments_from_json(data))
+    print(replicas_to_markdown(results))
+    return 1 if any(r.status in ("degraded", "down") for r in results) else 0
 
 
 def cmd_nodes_health(args: argparse.Namespace) -> int:
@@ -1676,6 +1691,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     nodes_health.add_argument("--overcommit-pct", type=float, default=100.0)
     nodes_health.set_defaults(func=cmd_nodes_health)
+
+    replicas = sub.add_parser("replicas", help="Audit replica counts.")
+    replicas_sub = replicas.add_subparsers(dest="replicas_command", required=True)
+
+    replicas_audit = replicas_sub.add_parser(
+        "audit", help="Flag under-replicated deployments from a JSON file."
+    )
+    replicas_audit.add_argument(
+        "--deployments", required=True,
+        help="JSON file: list of {name, namespace, desired, ready}.",
+    )
+    replicas_audit.set_defaults(func=cmd_replicas_audit)
     return parser
 
 
