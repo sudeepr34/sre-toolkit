@@ -33,6 +33,9 @@ from .quota import to_markdown as quota_to_markdown
 from .replicas import check_replicas as replicas_check_replicas
 from .replicas import deployments_from_json as replicas_deployments_from_json
 from .replicas import to_markdown as replicas_to_markdown
+from .network import check_network as network_check_network
+from .network import to_markdown as network_to_markdown
+from .network import workloads_from_json as network_workloads_from_json
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -265,6 +268,18 @@ def cmd_quota_check(args: argparse.Namespace) -> int:
     )
     print(quota_to_markdown(results))
     return 1 if any(r.issues for r in results) else 0
+
+
+def cmd_network_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.workloads) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.workloads}: {exc}", file=sys.stderr)
+        return 2
+    results = network_check_network(network_workloads_from_json(data))
+    print(network_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
 def cmd_replicas_audit(args: argparse.Namespace) -> int:
@@ -1764,6 +1779,20 @@ def build_parser() -> argparse.ArgumentParser:
     pvc_usage.add_argument("--warning-pct", type=float, default=80.0)
     pvc_usage.add_argument("--critical-pct", type=float, default=95.0)
     pvc_usage.set_defaults(func=cmd_pvc_usage)
+
+    network = sub.add_parser("network", help="Audit NetworkPolicies.")
+    network_sub = network.add_subparsers(dest="network_command", required=True)
+
+    network_audit = network_sub.add_parser(
+        "audit", help="Flag unsegmented workloads from a JSON file."
+    )
+    network_audit.add_argument(
+        "--workloads",
+        required=True,
+        help="JSON file: list of {namespace, workload, pod_selector, "
+        "has_policy, ingress, egress, default_deny, owner}.",
+    )
+    network_audit.set_defaults(func=cmd_network_audit)
     return parser
 
 

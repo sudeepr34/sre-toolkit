@@ -1563,3 +1563,39 @@ def test_pvc_usage_missing_file_errors(tmp_path, capsys):
     rc = main(["pvc", "usage", "--volumes", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_network_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "workloads.json"
+    path.write_text(_json.dumps([
+        {"namespace": "prod", "workload": "api", "pod_selector": "app=api",
+         "has_policy": True, "ingress": ["10.0.0.0/8"],
+         "egress": ["10.0.0.0/8"], "default_deny": True, "owner": "platform"},
+    ]))
+    rc = main(["network", "audit", "--workloads", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Workloads checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_network_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "workloads.json"
+    path.write_text(_json.dumps([
+        {"namespace": "staging", "workload": "web", "pod_selector": "app=web",
+         "has_policy": False, "ingress": [], "egress": [],
+         "default_deny": False, "owner": "platform"},
+    ]))
+    rc = main(["network", "audit", "--workloads", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| staging | web | no | no | platform | blocked | no NetworkPolicy |" in out
+
+
+def test_network_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["network", "audit", "--workloads", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
