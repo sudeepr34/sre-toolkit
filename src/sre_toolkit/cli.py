@@ -42,6 +42,9 @@ from .autoscale import workloads_from_json as autoscale_workloads_from_json
 from .ingress import check_ingresses as ingress_check_ingresses
 from .ingress import ingresses_from_json as ingress_ingresses_from_json
 from .ingress import to_markdown as ingress_to_markdown
+from .jobs import check_jobs as jobs_check_jobs
+from .jobs import jobs_from_json as jobs_jobs_from_json
+from .jobs import to_markdown as jobs_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -285,6 +288,18 @@ def cmd_network_audit(args: argparse.Namespace) -> int:
         return 2
     results = network_check_network(network_workloads_from_json(data))
     print(network_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_jobs_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.jobs) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.jobs}: {exc}", file=sys.stderr)
+        return 2
+    results = jobs_check_jobs(jobs_jobs_from_json(data), args.stale_hours)
+    print(jobs_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -1851,6 +1866,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {name, namespace, host, service, tls, owner}.",
     )
     ingress_audit.set_defaults(func=cmd_ingress_audit)
+
+    jobs = sub.add_parser("jobs", help="Audit CronJobs.")
+    jobs_sub = jobs.add_subparsers(dest="jobs_command", required=True)
+
+    jobs_audit = jobs_sub.add_parser(
+        "audit", help="Flag broken or stale CronJobs from a JSON file."
+    )
+    jobs_audit.add_argument(
+        "--jobs",
+        required=True,
+        help="JSON file: list of {name, namespace, schedule, "
+        "last_success_hours_ago, failed_runs, suspended, owner}.",
+    )
+    jobs_audit.add_argument("--stale-hours", type=float, default=24.0)
+    jobs_audit.set_defaults(func=cmd_jobs_audit)
     return parser
 
 

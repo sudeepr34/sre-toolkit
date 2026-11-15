@@ -180,6 +180,9 @@ sre-toolkit autoscale audit --workloads workloads.json
 
 # Ingress route audit: exposed, misrouted, or conflicting ingresses
 sre-toolkit ingress audit --ingresses ingresses.json
+
+# CronJob audit: broken, stale, or suspended CronJobs
+sre-toolkit jobs audit --jobs jobs.json
 ```
 
 Example output:
@@ -251,6 +254,7 @@ top errors:
 - [x] NetworkPolicy audit: unsegmented workloads and allow-all rules (`network` command)
 - [x] HPA autoscale audit: workloads that cannot scale or run hot (`autoscale` command)
 - [x] Ingress route audit: exposed, misrouted, or conflicting ingresses (`ingress` command)
+- [x] CronJob audit: broken, stale, or suspended CronJobs (`jobs` command)
 
 ## Development
 
