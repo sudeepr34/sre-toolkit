@@ -1637,3 +1637,37 @@ def test_autoscale_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["autoscale", "audit", "--workloads", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_ingress_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "ingresses.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "namespace": "prod", "host": "api.example.com",
+         "service": "api", "tls": True, "owner": "platform"},
+    ]))
+    rc = main(["ingress", "audit", "--ingresses", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Ingresses checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_ingress_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "ingresses.json"
+    path.write_text(_json.dumps([
+        {"name": "web", "namespace": "staging", "host": "web.example.com",
+         "service": "web", "tls": False, "owner": "platform"},
+    ]))
+    rc = main(["ingress", "audit", "--ingresses", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| staging | web | web.example.com | web | no | platform | blocked | no TLS |" in out
+
+
+def test_ingress_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["ingress", "audit", "--ingresses", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

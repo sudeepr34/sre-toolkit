@@ -177,6 +177,9 @@ sre-toolkit network audit --workloads workloads.json
 
 # HPA autoscale audit: workloads that cannot scale or run hot
 sre-toolkit autoscale audit --workloads workloads.json
+
+# Ingress route audit: exposed, misrouted, or conflicting ingresses
+sre-toolkit ingress audit --ingresses ingresses.json
 ```
 
 Example output:
@@ -247,6 +250,7 @@ top errors:
 - [x] Persistent volume usage: near-full and full volumes (`pvc` command)
 - [x] NetworkPolicy audit: unsegmented workloads and allow-all rules (`network` command)
 - [x] HPA autoscale audit: workloads that cannot scale or run hot (`autoscale` command)
+- [x] Ingress route audit: exposed, misrouted, or conflicting ingresses (`ingress` command)
 
 ## Development
 

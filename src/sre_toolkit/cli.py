@@ -39,6 +39,9 @@ from .network import workloads_from_json as network_workloads_from_json
 from .autoscale import check_autoscale as autoscale_check_autoscale
 from .autoscale import to_markdown as autoscale_to_markdown
 from .autoscale import workloads_from_json as autoscale_workloads_from_json
+from .ingress import check_ingresses as ingress_check_ingresses
+from .ingress import ingresses_from_json as ingress_ingresses_from_json
+from .ingress import to_markdown as ingress_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -282,6 +285,18 @@ def cmd_network_audit(args: argparse.Namespace) -> int:
         return 2
     results = network_check_network(network_workloads_from_json(data))
     print(network_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_ingress_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.ingresses) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.ingresses}: {exc}", file=sys.stderr)
+        return 2
+    results = ingress_check_ingresses(ingress_ingresses_from_json(data))
+    print(ingress_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -1823,6 +1838,19 @@ def build_parser() -> argparse.ArgumentParser:
         "current_cpu_pct, metric, owner}.",
     )
     autoscale_audit.set_defaults(func=cmd_autoscale_audit)
+
+    ingress = sub.add_parser("ingress", help="Audit ingress routes.")
+    ingress_sub = ingress.add_subparsers(dest="ingress_command", required=True)
+
+    ingress_audit = ingress_sub.add_parser(
+        "audit", help="Flag exposed or misrouted ingresses from a JSON file."
+    )
+    ingress_audit.add_argument(
+        "--ingresses",
+        required=True,
+        help="JSON file: list of {name, namespace, host, service, tls, owner}.",
+    )
+    ingress_audit.set_defaults(func=cmd_ingress_audit)
     return parser
 
 
