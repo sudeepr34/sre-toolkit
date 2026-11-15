@@ -1599,3 +1599,41 @@ def test_network_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["network", "audit", "--workloads", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_autoscale_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "workloads.json"
+    path.write_text(_json.dumps([
+        {"deployment": "api", "namespace": "prod", "has_hpa": True,
+         "min_replicas": 2, "max_replicas": 10, "current_replicas": 2,
+         "target_cpu_pct": 70, "current_cpu_pct": 50, "metric": "cpu",
+         "owner": "platform"},
+    ]))
+    rc = main(["autoscale", "audit", "--workloads", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Workloads checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_autoscale_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "workloads.json"
+    path.write_text(_json.dumps([
+        {"deployment": "web", "namespace": "staging", "has_hpa": False,
+         "min_replicas": 2, "max_replicas": 10, "current_replicas": 2,
+         "target_cpu_pct": 70, "current_cpu_pct": 50, "metric": "cpu",
+         "owner": "platform"},
+    ]))
+    rc = main(["autoscale", "audit", "--workloads", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| staging | web | no | 2 | 10 | 70% | 50% | platform | blocked | no HPA |" in out
+
+
+def test_autoscale_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["autoscale", "audit", "--workloads", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

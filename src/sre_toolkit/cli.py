@@ -36,6 +36,9 @@ from .replicas import to_markdown as replicas_to_markdown
 from .network import check_network as network_check_network
 from .network import to_markdown as network_to_markdown
 from .network import workloads_from_json as network_workloads_from_json
+from .autoscale import check_autoscale as autoscale_check_autoscale
+from .autoscale import to_markdown as autoscale_to_markdown
+from .autoscale import workloads_from_json as autoscale_workloads_from_json
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -279,6 +282,18 @@ def cmd_network_audit(args: argparse.Namespace) -> int:
         return 2
     results = network_check_network(network_workloads_from_json(data))
     print(network_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_autoscale_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.workloads) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.workloads}: {exc}", file=sys.stderr)
+        return 2
+    results = autoscale_check_autoscale(autoscale_workloads_from_json(data))
+    print(autoscale_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -1793,6 +1808,21 @@ def build_parser() -> argparse.ArgumentParser:
         "has_policy, ingress, egress, default_deny, owner}.",
     )
     network_audit.set_defaults(func=cmd_network_audit)
+
+    autoscale = sub.add_parser("autoscale", help="Audit HPA configuration.")
+    autoscale_sub = autoscale.add_subparsers(dest="autoscale_command", required=True)
+
+    autoscale_audit = autoscale_sub.add_parser(
+        "audit", help="Flag workloads that cannot scale from a JSON file."
+    )
+    autoscale_audit.add_argument(
+        "--workloads",
+        required=True,
+        help="JSON file: list of {deployment, namespace, has_hpa, "
+        "min_replicas, max_replicas, current_replicas, target_cpu_pct, "
+        "current_cpu_pct, metric, owner}.",
+    )
+    autoscale_audit.set_defaults(func=cmd_autoscale_audit)
     return parser
 
 

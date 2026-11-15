@@ -174,6 +174,9 @@ sre-toolkit pvc usage --volumes volumes.json
 
 # NetworkPolicy audit: unsegmented workloads and allow-all rules
 sre-toolkit network audit --workloads workloads.json
+
+# HPA autoscale audit: workloads that cannot scale or run hot
+sre-toolkit autoscale audit --workloads workloads.json
 ```
 
 Example output:
@@ -243,6 +246,7 @@ top errors:
 - [x] Namespace resource quota check: namespaces near their quotas (`quota` command)
 - [x] Persistent volume usage: near-full and full volumes (`pvc` command)
 - [x] NetworkPolicy audit: unsegmented workloads and allow-all rules (`network` command)
+- [x] HPA autoscale audit: workloads that cannot scale or run hot (`autoscale` command)
 
 ## Development
 
