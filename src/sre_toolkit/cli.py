@@ -48,6 +48,9 @@ from .jobs import to_markdown as jobs_to_markdown
 from .tfplan import changes_from_json as tfplan_changes_from_json
 from .tfplan import check_plan as tfplan_check_plan
 from .tfplan import to_markdown as tfplan_to_markdown
+from .image import check_images as image_check_images
+from .image import images_from_json as image_images_from_json
+from .image import to_markdown as image_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -303,6 +306,18 @@ def cmd_jobs_audit(args: argparse.Namespace) -> int:
         return 2
     results = jobs_check_jobs(jobs_jobs_from_json(data), args.stale_hours)
     print(jobs_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_image_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.images) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.images}: {exc}", file=sys.stderr)
+        return 2
+    results = image_check_images(image_images_from_json(data))
+    print(image_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -1909,6 +1924,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {address, type, action, owner, approved}.",
     )
     tfplan_audit.set_defaults(func=cmd_tfplan_audit)
+
+    image = sub.add_parser("image", help="Audit container images.")
+    image_sub = image.add_subparsers(dest="image_command", required=True)
+
+    image_audit = image_sub.add_parser(
+        "audit", help="Flag risky or blocked images from a JSON file."
+    )
+    image_audit.add_argument(
+        "--images",
+        required=True,
+        help="JSON file: list of {image, tag, digest_pinned, "
+        "age_days, owner}.",
+    )
+    image_audit.set_defaults(func=cmd_image_audit)
     return parser
 
 

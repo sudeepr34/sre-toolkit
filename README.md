@@ -186,6 +186,9 @@ sre-toolkit jobs audit --jobs jobs.json
 
 # Terraform plan audit: risky or blocked changes before apply
 sre-toolkit tfplan audit --plan plan.json
+
+# Container image audit: latest, unpinned, or stale images
+sre-toolkit image audit --images images.json
 ```
 
 Example output:
@@ -259,6 +262,7 @@ top errors:
 - [x] Ingress route audit: exposed, misrouted, or conflicting ingresses (`ingress` command)
 - [x] CronJob audit: broken, stale, or suspended CronJobs (`jobs` command)
 - [x] Terraform plan audit: risky or blocked changes before apply (`tfplan` command)
+- [x] Container image audit: latest, unpinned, or stale images (`image` command)
 
 ## Development
 
