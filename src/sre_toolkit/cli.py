@@ -45,6 +45,9 @@ from .ingress import to_markdown as ingress_to_markdown
 from .jobs import check_jobs as jobs_check_jobs
 from .jobs import jobs_from_json as jobs_jobs_from_json
 from .jobs import to_markdown as jobs_to_markdown
+from .tfplan import changes_from_json as tfplan_changes_from_json
+from .tfplan import check_plan as tfplan_check_plan
+from .tfplan import to_markdown as tfplan_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -300,6 +303,18 @@ def cmd_jobs_audit(args: argparse.Namespace) -> int:
         return 2
     results = jobs_check_jobs(jobs_jobs_from_json(data), args.stale_hours)
     print(jobs_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_tfplan_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.plan) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.plan}: {exc}", file=sys.stderr)
+        return 2
+    results = tfplan_check_plan(tfplan_changes_from_json(data))
+    print(tfplan_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -1881,6 +1896,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     jobs_audit.add_argument("--stale-hours", type=float, default=24.0)
     jobs_audit.set_defaults(func=cmd_jobs_audit)
+
+    tfplan = sub.add_parser("tfplan", help="Audit a Terraform plan.")
+    tfplan_sub = tfplan.add_subparsers(dest="tfplan_command", required=True)
+
+    tfplan_audit = tfplan_sub.add_parser(
+        "audit", help="Flag risky or blocked changes from a Terraform plan JSON file."
+    )
+    tfplan_audit.add_argument(
+        "--plan",
+        required=True,
+        help="JSON file: list of {address, type, action, owner, approved}.",
+    )
+    tfplan_audit.set_defaults(func=cmd_tfplan_audit)
     return parser
 
 

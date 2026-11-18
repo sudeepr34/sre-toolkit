@@ -1707,3 +1707,37 @@ def test_jobs_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["jobs", "audit", "--jobs", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_tfplan_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "plan.json"
+    path.write_text(_json.dumps([
+        {"address": "aws_instance.web", "type": "aws_instance",
+         "action": "create", "owner": "platform", "approved": True},
+    ]))
+    rc = main(["tfplan", "audit", "--plan", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Changes checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_tfplan_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "plan.json"
+    path.write_text(_json.dumps([
+        {"address": "aws_db_instance.main", "type": "aws_db_instance",
+         "action": "destroy", "owner": "platform", "approved": True},
+    ]))
+    rc = main(["tfplan", "audit", "--plan", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| aws_db_instance.main | aws_db_instance | destroy | yes | platform | blocked | destroy of stateful resource |" in out
+
+
+def test_tfplan_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["tfplan", "audit", "--plan", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

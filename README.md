@@ -183,6 +183,9 @@ sre-toolkit ingress audit --ingresses ingresses.json
 
 # CronJob audit: broken, stale, or suspended CronJobs
 sre-toolkit jobs audit --jobs jobs.json
+
+# Terraform plan audit: risky or blocked changes before apply
+sre-toolkit tfplan audit --plan plan.json
 ```
 
 Example output:
@@ -255,6 +258,7 @@ top errors:
 - [x] HPA autoscale audit: workloads that cannot scale or run hot (`autoscale` command)
 - [x] Ingress route audit: exposed, misrouted, or conflicting ingresses (`ingress` command)
 - [x] CronJob audit: broken, stale, or suspended CronJobs (`jobs` command)
+- [x] Terraform plan audit: risky or blocked changes before apply (`tfplan` command)
 
 ## Development
 
