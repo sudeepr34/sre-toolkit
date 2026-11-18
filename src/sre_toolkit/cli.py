@@ -48,6 +48,9 @@ from .jobs import to_markdown as jobs_to_markdown
 from .tfplan import changes_from_json as tfplan_changes_from_json
 from .tfplan import check_plan as tfplan_check_plan
 from .tfplan import to_markdown as tfplan_to_markdown
+from .cron import check_crons as cron_check_crons
+from .cron import crons_from_json as cron_crons_from_json
+from .cron import to_markdown as cron_to_markdown
 from .image import check_images as image_check_images
 from .image import images_from_json as image_images_from_json
 from .image import to_markdown as image_to_markdown
@@ -306,6 +309,18 @@ def cmd_jobs_audit(args: argparse.Namespace) -> int:
         return 2
     results = jobs_check_jobs(jobs_jobs_from_json(data), args.stale_hours)
     print(jobs_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_cron_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.crons) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.crons}: {exc}", file=sys.stderr)
+        return 2
+    results = cron_check_crons(cron_crons_from_json(data))
+    print(cron_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -1938,6 +1953,19 @@ def build_parser() -> argparse.ArgumentParser:
         "age_days, owner}.",
     )
     image_audit.set_defaults(func=cmd_image_audit)
+
+    cron = sub.add_parser("cron", help="Audit cron schedules.")
+    cron_sub = cron.add_subparsers(dest="cron_command", required=True)
+
+    cron_audit = cron_sub.add_parser(
+        "audit", help="Flag invalid or risky cron schedules from a JSON file."
+    )
+    cron_audit.add_argument(
+        "--crons",
+        required=True,
+        help="JSON file: list of {name, namespace, schedule, owner}.",
+    )
+    cron_audit.set_defaults(func=cmd_cron_audit)
     return parser
 
 

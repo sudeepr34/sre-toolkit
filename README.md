@@ -189,6 +189,9 @@ sre-toolkit tfplan audit --plan plan.json
 
 # Container image audit: latest, unpinned, or stale images
 sre-toolkit image audit --images images.json
+
+# Cron schedule audit: invalid, too-frequent, or duplicated schedules
+sre-toolkit cron audit --crons crons.json
 ```
 
 Example output:
@@ -263,6 +266,7 @@ top errors:
 - [x] CronJob audit: broken, stale, or suspended CronJobs (`jobs` command)
 - [x] Terraform plan audit: risky or blocked changes before apply (`tfplan` command)
 - [x] Container image audit: latest, unpinned, or stale images (`image` command)
+- [x] Cron schedule audit: invalid, too-frequent, or duplicated schedules (`cron` command)
 
 ## Development
 

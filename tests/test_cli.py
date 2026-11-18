@@ -1775,3 +1775,37 @@ def test_image_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["image", "audit", "--images", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_cron_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "crons.json"
+    path.write_text(_json.dumps([
+        {"name": "backup", "namespace": "prod", "schedule": "0 2 * * *",
+         "owner": "platform"},
+    ]))
+    rc = main(["cron", "audit", "--crons", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Schedules checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_cron_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "crons.json"
+    path.write_text(_json.dumps([
+        {"name": "cleanup", "namespace": "staging",
+         "schedule": "61 2 * * *", "owner": "platform"},
+    ]))
+    rc = main(["cron", "audit", "--crons", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| staging | cleanup | 61 2 * * * | platform | blocked | invalid schedule |" in out
+
+
+def test_cron_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["cron", "audit", "--crons", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
