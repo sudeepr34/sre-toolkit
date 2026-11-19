@@ -192,6 +192,9 @@ sre-toolkit image audit --images images.json
 
 # Cron schedule audit: invalid, too-frequent, or duplicated schedules
 sre-toolkit cron audit --crons crons.json
+
+# RBAC binding audit: cluster-admin, wildcard, or ownerless bindings
+sre-toolkit rbac audit --bindings bindings.json
 ```
 
 Example output:
@@ -267,6 +270,7 @@ top errors:
 - [x] Terraform plan audit: risky or blocked changes before apply (`tfplan` command)
 - [x] Container image audit: latest, unpinned, or stale images (`image` command)
 - [x] Cron schedule audit: invalid, too-frequent, or duplicated schedules (`cron` command)
+- [x] RBAC binding audit: cluster-admin, wildcard, or ownerless bindings (`rbac` command)
 
 ## Development
 

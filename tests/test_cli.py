@@ -1809,3 +1809,42 @@ def test_cron_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["cron", "audit", "--crons", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_rbac_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "bindings.json"
+    path.write_text(_json.dumps([
+        {"name": "deployer", "namespace": "prod",
+         "subject_kind": "ServiceAccount", "subject_name": "deployer",
+         "role": "deploy", "verbs": ["get", "list"],
+         "resources": ["deployments"], "owner": "platform"},
+    ]))
+    rc = main(["rbac", "audit", "--bindings", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Bindings checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_rbac_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "bindings.json"
+    path.write_text(_json.dumps([
+        {"name": "admin", "namespace": "staging",
+         "subject_kind": "ServiceAccount", "subject_name": "admin",
+         "role": "cluster-admin", "verbs": ["*"],
+         "resources": ["*"], "owner": "platform"},
+    ]))
+    rc = main(["rbac", "audit", "--bindings", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "cluster-admin role" in out
+    assert "wildcard verb" in out
+
+
+def test_rbac_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["rbac", "audit", "--bindings", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

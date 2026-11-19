@@ -51,6 +51,9 @@ from .tfplan import to_markdown as tfplan_to_markdown
 from .cron import check_crons as cron_check_crons
 from .cron import crons_from_json as cron_crons_from_json
 from .cron import to_markdown as cron_to_markdown
+from .rbac import bindings_from_json as rbac_bindings_from_json
+from .rbac import check_bindings as rbac_check_bindings
+from .rbac import to_markdown as rbac_to_markdown
 from .image import check_images as image_check_images
 from .image import images_from_json as image_images_from_json
 from .image import to_markdown as image_to_markdown
@@ -321,6 +324,18 @@ def cmd_cron_audit(args: argparse.Namespace) -> int:
         return 2
     results = cron_check_crons(cron_crons_from_json(data))
     print(cron_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_rbac_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.bindings) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.bindings}: {exc}", file=sys.stderr)
+        return 2
+    results = rbac_check_bindings(rbac_bindings_from_json(data))
+    print(rbac_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -1966,6 +1981,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {name, namespace, schedule, owner}.",
     )
     cron_audit.set_defaults(func=cmd_cron_audit)
+
+    rbac = sub.add_parser("rbac", help="Audit RBAC bindings.")
+    rbac_sub = rbac.add_subparsers(dest="rbac_command", required=True)
+
+    rbac_audit = rbac_sub.add_parser(
+        "audit",
+        help="Flag cluster-admin or wildcard RBAC bindings from a JSON file.",
+    )
+    rbac_audit.add_argument(
+        "--bindings",
+        required=True,
+        help="JSON file: list of {name, namespace, subject_kind, "
+        "subject_name, role, verbs, resources, owner}.",
+    )
+    rbac_audit.set_defaults(func=cmd_rbac_audit)
     return parser
 
 
