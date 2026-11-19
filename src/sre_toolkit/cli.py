@@ -60,6 +60,9 @@ from .image import to_markdown as image_to_markdown
 from .pdb import check_pdbs as pdb_check_pdbs
 from .pdb import pdbs_from_json as pdb_pdbs_from_json
 from .pdb import to_markdown as pdb_to_markdown
+from .storageclass import check_storage_classes as sc_check_classes
+from .storageclass import storage_classes_from_json as sc_classes_from_json
+from .storageclass import to_markdown as sc_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -351,6 +354,18 @@ def cmd_pdb_audit(args: argparse.Namespace) -> int:
         return 2
     results = pdb_check_pdbs(pdb_pdbs_from_json(data))
     print(pdb_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_storageclass_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.classes) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.classes}: {exc}", file=sys.stderr)
+        return 2
+    results = sc_check_classes(sc_classes_from_json(data))
+    print(sc_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -2025,6 +2040,20 @@ def build_parser() -> argparse.ArgumentParser:
         "max_unavailable, disruptions_allowed, replicas, owner}.",
     )
     pdb_audit.set_defaults(func=cmd_pdb_audit)
+
+    sc = sub.add_parser("storageclass", help="Audit StorageClasses.")
+    sc_sub = sc.add_subparsers(dest="sc_command", required=True)
+
+    sc_audit = sc_sub.add_parser(
+        "audit", help="Flag risky StorageClasses from a JSON file."
+    )
+    sc_audit.add_argument(
+        "--classes",
+        required=True,
+        help="JSON file: list of {name, provisioner, reclaim_policy, "
+        "is_default, owner}.",
+    )
+    sc_audit.set_defaults(func=cmd_storageclass_audit)
     return parser
 
 

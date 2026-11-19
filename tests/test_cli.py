@@ -1884,3 +1884,39 @@ def test_pdb_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["pdb", "audit", "--pdbs", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_storageclass_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "classes.json"
+    path.write_text(_json.dumps([
+        {"name": "fast", "provisioner": "ebs.csi.aws.com",
+         "reclaim_policy": "Retain", "is_default": True,
+         "owner": "platform"},
+    ]))
+    rc = main(["storageclass", "audit", "--classes", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "StorageClasses checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_storageclass_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "classes.json"
+    path.write_text(_json.dumps([
+        {"name": "slow", "provisioner": "",
+         "reclaim_policy": "Retain", "is_default": True,
+         "owner": "platform"},
+    ]))
+    rc = main(["storageclass", "audit", "--classes", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| slow | — | Retain | yes | platform | blocked | no provisioner |" in out
+
+
+def test_storageclass_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["storageclass", "audit", "--classes", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

@@ -198,6 +198,9 @@ sre-toolkit rbac audit --bindings bindings.json
 
 # PodDisruptionBudget audit: PDBs that block drains
 sre-toolkit pdb audit --pdbs pdbs.json
+
+# StorageClass audit: risky reclaim, missing default, or no provisioner
+sre-toolkit storageclass audit --classes classes.json
 ```
 
 Example output:
@@ -275,6 +278,7 @@ top errors:
 - [x] Cron schedule audit: invalid, too-frequent, or duplicated schedules (`cron` command)
 - [x] RBAC binding audit: cluster-admin, wildcard, or ownerless bindings (`rbac` command)
 - [x] PodDisruptionBudget audit: PDBs that block drains (`pdb` command)
+- [x] StorageClass audit: risky reclaim, missing default, or no provisioner (`storageclass` command)
 
 ## Development
 
