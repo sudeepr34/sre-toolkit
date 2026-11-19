@@ -1848,3 +1848,39 @@ def test_rbac_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["rbac", "audit", "--bindings", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_pdb_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "pdbs.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "namespace": "prod", "min_available": 1,
+         "max_unavailable": None, "disruptions_allowed": 2,
+         "replicas": 3, "owner": "platform"},
+    ]))
+    rc = main(["pdb", "audit", "--pdbs", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "PDBs checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_pdb_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "pdbs.json"
+    path.write_text(_json.dumps([
+        {"name": "web", "namespace": "staging", "min_available": 1,
+         "max_unavailable": None, "disruptions_allowed": 0,
+         "replicas": 3, "owner": "platform"},
+    ]))
+    rc = main(["pdb", "audit", "--pdbs", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| staging | web | 1 | — | 0 | 3 | platform | blocked | blocks all drains |" in out
+
+
+def test_pdb_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["pdb", "audit", "--pdbs", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

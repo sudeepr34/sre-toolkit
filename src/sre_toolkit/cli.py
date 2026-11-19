@@ -57,6 +57,9 @@ from .rbac import to_markdown as rbac_to_markdown
 from .image import check_images as image_check_images
 from .image import images_from_json as image_images_from_json
 from .image import to_markdown as image_to_markdown
+from .pdb import check_pdbs as pdb_check_pdbs
+from .pdb import pdbs_from_json as pdb_pdbs_from_json
+from .pdb import to_markdown as pdb_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -336,6 +339,18 @@ def cmd_rbac_audit(args: argparse.Namespace) -> int:
         return 2
     results = rbac_check_bindings(rbac_bindings_from_json(data))
     print(rbac_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_pdb_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.pdbs) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.pdbs}: {exc}", file=sys.stderr)
+        return 2
+    results = pdb_check_pdbs(pdb_pdbs_from_json(data))
+    print(pdb_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -1996,6 +2011,20 @@ def build_parser() -> argparse.ArgumentParser:
         "subject_name, role, verbs, resources, owner}.",
     )
     rbac_audit.set_defaults(func=cmd_rbac_audit)
+
+    pdb = sub.add_parser("pdb", help="Audit PodDisruptionBudgets.")
+    pdb_sub = pdb.add_subparsers(dest="pdb_command", required=True)
+
+    pdb_audit = pdb_sub.add_parser(
+        "audit", help="Flag drain-blocking PDBs from a JSON file."
+    )
+    pdb_audit.add_argument(
+        "--pdbs",
+        required=True,
+        help="JSON file: list of {name, namespace, min_available, "
+        "max_unavailable, disruptions_allowed, replicas, owner}.",
+    )
+    pdb_audit.set_defaults(func=cmd_pdb_audit)
     return parser
 
 
