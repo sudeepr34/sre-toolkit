@@ -1920,3 +1920,43 @@ def test_storageclass_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["storageclass", "audit", "--classes", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_statefulset_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "statefulsets.json"
+    path.write_text(_json.dumps([
+        {"name": "db", "namespace": "prod", "replicas": 3,
+         "ready_replicas": 3, "service_name": "db",
+         "volume_claim_templates": 1, "update_strategy": "RollingUpdate",
+         "pod_management_policy": "OrderedReady", "owner": "platform"},
+    ]))
+    rc = main(["statefulset", "audit", "--statefulsets", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "StatefulSets checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_statefulset_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "statefulsets.json"
+    path.write_text(_json.dumps([
+        {"name": "db", "namespace": "staging", "replicas": 3,
+         "ready_replicas": 2, "service_name": "",
+         "volume_claim_templates": 0, "update_strategy": "RollingUpdate",
+         "pod_management_policy": "OrderedReady", "owner": "platform"},
+    ]))
+    rc = main(["statefulset", "audit", "--statefulsets", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "no headless service" in out
+    assert "not fully ready" in out
+
+
+def test_statefulset_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["statefulset", "audit", "--statefulsets", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
+

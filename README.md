@@ -201,6 +201,9 @@ sre-toolkit pdb audit --pdbs pdbs.json
 
 # StorageClass audit: risky reclaim, missing default, or no provisioner
 sre-toolkit storageclass audit --classes classes.json
+
+# StatefulSet audit: no headless service, no persistent storage, or not fully ready
+sre-toolkit statefulset audit --statefulsets statefulsets.json
 ```
 
 Example output:
@@ -279,6 +282,7 @@ top errors:
 - [x] RBAC binding audit: cluster-admin, wildcard, or ownerless bindings (`rbac` command)
 - [x] PodDisruptionBudget audit: PDBs that block drains (`pdb` command)
 - [x] StorageClass audit: risky reclaim, missing default, or no provisioner (`storageclass` command)
+- [x] StatefulSet audit: no headless service, no persistent storage, or not fully ready (`statefulset` command)
 
 ## Development
 

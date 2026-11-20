@@ -63,6 +63,9 @@ from .pdb import to_markdown as pdb_to_markdown
 from .storageclass import check_storage_classes as sc_check_classes
 from .storageclass import storage_classes_from_json as sc_classes_from_json
 from .storageclass import to_markdown as sc_to_markdown
+from .statefulset import check_stateful_sets as sts_check_sets
+from .statefulset import stateful_sets_from_json as sts_sets_from_json
+from .statefulset import to_markdown as sts_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -366,6 +369,21 @@ def cmd_storageclass_audit(args: argparse.Namespace) -> int:
         return 2
     results = sc_check_classes(sc_classes_from_json(data))
     print(sc_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_statefulset_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.statefulsets) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(
+            f"error: cannot read {args.statefulsets}: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+    results = sts_check_sets(sts_sets_from_json(data))
+    print(sts_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -2054,6 +2072,22 @@ def build_parser() -> argparse.ArgumentParser:
         "is_default, owner}.",
     )
     sc_audit.set_defaults(func=cmd_storageclass_audit)
+
+    sts = sub.add_parser("statefulset", help="Audit StatefulSets.")
+    sts_sub = sts.add_subparsers(dest="sts_command", required=True)
+
+    sts_audit = sts_sub.add_parser(
+        "audit", help="Flag risky StatefulSets from a JSON file."
+    )
+    sts_audit.add_argument(
+        "--statefulsets",
+        required=True,
+        help="JSON file: list of {name, namespace, replicas, "
+        "ready_replicas, service_name, volume_claim_templates, "
+        "update_strategy, pod_management_policy, owner}.",
+    )
+    sts_audit.set_defaults(func=cmd_statefulset_audit)
+
     return parser
 
 
