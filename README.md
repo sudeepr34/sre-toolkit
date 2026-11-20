@@ -204,6 +204,9 @@ sre-toolkit storageclass audit --classes classes.json
 
 # StatefulSet audit: no headless service, no persistent storage, or not fully ready
 sre-toolkit statefulset audit --statefulsets statefulsets.json
+
+# DaemonSet audit: nodes missing the agent, or pods that won't schedule
+sre-toolkit daemonset audit --daemonsets daemonsets.json
 ```
 
 Example output:
@@ -283,6 +286,7 @@ top errors:
 - [x] PodDisruptionBudget audit: PDBs that block drains (`pdb` command)
 - [x] StorageClass audit: risky reclaim, missing default, or no provisioner (`storageclass` command)
 - [x] StatefulSet audit: no headless service, no persistent storage, or not fully ready (`statefulset` command)
+- [x] DaemonSet audit: nodes missing the agent, or pods that won't schedule (`daemonset` command)
 
 ## Development
 

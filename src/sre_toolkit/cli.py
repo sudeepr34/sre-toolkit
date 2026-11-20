@@ -66,6 +66,9 @@ from .storageclass import to_markdown as sc_to_markdown
 from .statefulset import check_stateful_sets as sts_check_sets
 from .statefulset import stateful_sets_from_json as sts_sets_from_json
 from .statefulset import to_markdown as sts_to_markdown
+from .daemonset import check_daemon_sets as ds_check_sets
+from .daemonset import daemon_sets_from_json as ds_sets_from_json
+from .daemonset import to_markdown as ds_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -384,6 +387,21 @@ def cmd_statefulset_audit(args: argparse.Namespace) -> int:
         return 2
     results = sts_check_sets(sts_sets_from_json(data))
     print(sts_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_daemonset_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.daemonsets) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(
+            f"error: cannot read {args.daemonsets}: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+    results = ds_check_sets(ds_sets_from_json(data))
+    print(ds_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -2087,6 +2105,20 @@ def build_parser() -> argparse.ArgumentParser:
         "update_strategy, pod_management_policy, owner}.",
     )
     sts_audit.set_defaults(func=cmd_statefulset_audit)
+
+    ds = sub.add_parser("daemonset", help="Audit DaemonSets.")
+    ds_sub = ds.add_subparsers(dest="ds_command", required=True)
+
+    ds_audit = ds_sub.add_parser(
+        "audit", help="Flag risky DaemonSets from a JSON file."
+    )
+    ds_audit.add_argument(
+        "--daemonsets",
+        required=True,
+        help="JSON file: list of {name, namespace, desired, "
+        "ready, misscheduled, update_strategy, owner}.",
+    )
+    ds_audit.set_defaults(func=cmd_daemonset_audit)
 
     return parser
 

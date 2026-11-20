@@ -1960,3 +1960,40 @@ def test_statefulset_audit_missing_file_errors(tmp_path, capsys):
     assert rc == 2
     assert "error:" in capsys.readouterr().err
 
+
+def test_daemonset_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "daemonsets.json"
+    path.write_text(_json.dumps([
+        {"name": "agent", "namespace": "prod", "desired": 5,
+         "ready": 5, "misscheduled": 0,
+         "update_strategy": "RollingUpdate", "owner": "platform"},
+    ]))
+    rc = main(["daemonset", "audit", "--daemonsets", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "DaemonSets checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_daemonset_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "daemonsets.json"
+    path.write_text(_json.dumps([
+        {"name": "agent", "namespace": "staging", "desired": 5,
+         "ready": 3, "misscheduled": 1,
+         "update_strategy": "RollingUpdate", "owner": "platform"},
+    ]))
+    rc = main(["daemonset", "audit", "--daemonsets", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "not fully ready" in out
+    assert "pods misscheduled" in out
+
+
+def test_daemonset_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["daemonset", "audit", "--daemonsets", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
+
