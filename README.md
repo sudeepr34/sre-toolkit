@@ -207,6 +207,9 @@ sre-toolkit statefulset audit --statefulsets statefulsets.json
 
 # DaemonSet audit: nodes missing the agent, or pods that won't schedule
 sre-toolkit daemonset audit --daemonsets daemonsets.json
+
+# ConfigMap audit: empty, oversized, or ownerless config
+sre-toolkit configmap audit --configmaps configmaps.json
 ```
 
 Example output:
@@ -287,6 +290,7 @@ top errors:
 - [x] StorageClass audit: risky reclaim, missing default, or no provisioner (`storageclass` command)
 - [x] StatefulSet audit: no headless service, no persistent storage, or not fully ready (`statefulset` command)
 - [x] DaemonSet audit: nodes missing the agent, or pods that won't schedule (`daemonset` command)
+- [x] ConfigMap audit: empty, oversized, or ownerless config (`configmap` command)
 
 ## Development
 

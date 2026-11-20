@@ -1997,3 +1997,37 @@ def test_daemonset_audit_missing_file_errors(tmp_path, capsys):
     assert rc == 2
     assert "error:" in capsys.readouterr().err
 
+
+def test_configmap_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "configmaps.json"
+    path.write_text(_json.dumps([
+        {"name": "app", "namespace": "prod", "keys": 4,
+         "empty_keys": 0, "size_kb": 12, "owner": "platform"},
+    ]))
+    rc = main(["configmap", "audit", "--configmaps", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "ConfigMaps checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_configmap_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "configmaps.json"
+    path.write_text(_json.dumps([
+        {"name": "app", "namespace": "staging", "keys": 0,
+         "empty_keys": 0, "size_kb": 2048, "owner": "platform"},
+    ]))
+    rc = main(["configmap", "audit", "--configmaps", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "no data keys" in out
+    assert "exceeds 1MiB limit" in out
+
+
+def test_configmap_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["configmap", "audit", "--configmaps", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

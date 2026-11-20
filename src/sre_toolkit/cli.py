@@ -69,6 +69,9 @@ from .statefulset import to_markdown as sts_to_markdown
 from .daemonset import check_daemon_sets as ds_check_sets
 from .daemonset import daemon_sets_from_json as ds_sets_from_json
 from .daemonset import to_markdown as ds_to_markdown
+from .configmap import check_config_maps as cm_check_maps
+from .configmap import config_maps_from_json as cm_maps_from_json
+from .configmap import to_markdown as cm_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -402,6 +405,21 @@ def cmd_daemonset_audit(args: argparse.Namespace) -> int:
         return 2
     results = ds_check_sets(ds_sets_from_json(data))
     print(ds_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_configmap_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.configmaps) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(
+            f"error: cannot read {args.configmaps}: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+    results = cm_check_maps(cm_maps_from_json(data))
+    print(cm_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -2120,6 +2138,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ds_audit.set_defaults(func=cmd_daemonset_audit)
 
+    cm = sub.add_parser("configmap", help="Audit ConfigMaps.")
+    cm_sub = cm.add_subparsers(dest="cm_command", required=True)
+
+    cm_audit = cm_sub.add_parser(
+        "audit", help="Flag risky ConfigMaps from a JSON file."
+    )
+    cm_audit.add_argument(
+        "--configmaps",
+        required=True,
+        help="JSON file: list of {name, namespace, keys, "
+        "empty_keys, size_kb, owner}.",
+    )
+    cm_audit.set_defaults(func=cmd_configmap_audit)
     return parser
 
 
