@@ -216,6 +216,9 @@ sre-toolkit webhook audit --webhooks webhooks.json
 
 # PriorityClass audit: invalid values or duplicate global defaults
 sre-toolkit priority audit --classes classes.json
+
+# Namespace audit: namespaces missing quota, limits, or network policy
+sre-toolkit namespace audit --namespaces namespaces.json
 ```
 
 Example output:
@@ -299,6 +302,7 @@ top errors:
 - [x] ConfigMap audit: empty, oversized, or ownerless config (`configmap` command)
 - [x] Admission webhook audit: unverifiable, slow, or fail-closed webhooks (`webhook` command)
 - [x] PriorityClass audit: invalid values or duplicate global defaults (`priority` command)
+- [x] Namespace audit: namespaces missing quota, limits, or network policy (`namespace` command)
 
 ## Development
 

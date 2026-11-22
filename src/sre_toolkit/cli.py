@@ -78,6 +78,9 @@ from .webhook import webhooks_from_json as wh_webhooks_from_json
 from .priority import check_priority_classes as pc_check_classes
 from .priority import priority_classes_from_json as pc_classes_from_json
 from .priority import to_markdown as pc_to_markdown
+from .namespace import check_namespaces as ns_check_namespaces
+from .namespace import namespaces_from_json as ns_namespaces_from_json
+from .namespace import to_markdown as ns_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -438,6 +441,18 @@ def cmd_priority_audit(args: argparse.Namespace) -> int:
         return 2
     results = pc_check_classes(pc_classes_from_json(data))
     print(pc_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_namespace_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.namespaces) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.namespaces}: {exc}", file=sys.stderr)
+        return 2
+    results = ns_check_namespaces(ns_namespaces_from_json(data))
+    print(ns_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -2211,6 +2226,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON file: list of {name, value, global_default, owner}.",
     )
     pc_audit.set_defaults(func=cmd_priority_audit)
+
+    ns = sub.add_parser("namespace", help="Audit namespaces.")
+    ns_sub = ns.add_subparsers(dest="ns_command", required=True)
+
+    ns_audit = ns_sub.add_parser(
+        "audit", help="Flag unguarded namespaces from a JSON file."
+    )
+    ns_audit.add_argument(
+        "--namespaces",
+        required=True,
+        help="JSON file: list of {name, has_resource_quota, "
+        "has_limit_range, has_network_policy, owner}.",
+    )
+    ns_audit.set_defaults(func=cmd_namespace_audit)
     return parser
 
 
