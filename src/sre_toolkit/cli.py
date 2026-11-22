@@ -75,6 +75,9 @@ from .configmap import to_markdown as cm_to_markdown
 from .webhook import check_webhooks as wh_check_webhooks
 from .webhook import to_markdown as wh_to_markdown
 from .webhook import webhooks_from_json as wh_webhooks_from_json
+from .priority import check_priority_classes as pc_check_classes
+from .priority import priority_classes_from_json as pc_classes_from_json
+from .priority import to_markdown as pc_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -423,6 +426,18 @@ def cmd_configmap_audit(args: argparse.Namespace) -> int:
         return 2
     results = cm_check_maps(cm_maps_from_json(data))
     print(cm_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_priority_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.classes) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.classes}: {exc}", file=sys.stderr)
+        return 2
+    results = pc_check_classes(pc_classes_from_json(data))
+    print(pc_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -2183,6 +2198,19 @@ def build_parser() -> argparse.ArgumentParser:
         "timeout_seconds, ca_bundle, namespace_selector, owner}.",
     )
     wh_audit.set_defaults(func=cmd_webhook_audit)
+
+    pc = sub.add_parser("priority", help="Audit PriorityClasses.")
+    pc_sub = pc.add_subparsers(dest="pc_command", required=True)
+
+    pc_audit = pc_sub.add_parser(
+        "audit", help="Flag invalid PriorityClasses from a JSON file."
+    )
+    pc_audit.add_argument(
+        "--classes",
+        required=True,
+        help="JSON file: list of {name, value, global_default, owner}.",
+    )
+    pc_audit.set_defaults(func=cmd_priority_audit)
     return parser
 
 

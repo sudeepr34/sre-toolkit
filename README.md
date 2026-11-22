@@ -213,6 +213,9 @@ sre-toolkit configmap audit --configmaps configmaps.json
 
 # Admission webhook audit: unverifiable, slow, or fail-closed webhooks
 sre-toolkit webhook audit --webhooks webhooks.json
+
+# PriorityClass audit: invalid values or duplicate global defaults
+sre-toolkit priority audit --classes classes.json
 ```
 
 Example output:
@@ -295,6 +298,7 @@ top errors:
 - [x] DaemonSet audit: nodes missing the agent, or pods that won't schedule (`daemonset` command)
 - [x] ConfigMap audit: empty, oversized, or ownerless config (`configmap` command)
 - [x] Admission webhook audit: unverifiable, slow, or fail-closed webhooks (`webhook` command)
+- [x] PriorityClass audit: invalid values or duplicate global defaults (`priority` command)
 
 ## Development
 
