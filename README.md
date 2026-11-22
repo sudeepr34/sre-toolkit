@@ -210,6 +210,9 @@ sre-toolkit daemonset audit --daemonsets daemonsets.json
 
 # ConfigMap audit: empty, oversized, or ownerless config
 sre-toolkit configmap audit --configmaps configmaps.json
+
+# Admission webhook audit: unverifiable, slow, or fail-closed webhooks
+sre-toolkit webhook audit --webhooks webhooks.json
 ```
 
 Example output:
@@ -291,6 +294,7 @@ top errors:
 - [x] StatefulSet audit: no headless service, no persistent storage, or not fully ready (`statefulset` command)
 - [x] DaemonSet audit: nodes missing the agent, or pods that won't schedule (`daemonset` command)
 - [x] ConfigMap audit: empty, oversized, or ownerless config (`configmap` command)
+- [x] Admission webhook audit: unverifiable, slow, or fail-closed webhooks (`webhook` command)
 
 ## Development
 

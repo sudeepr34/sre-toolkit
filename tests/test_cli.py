@@ -2031,3 +2031,42 @@ def test_configmap_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["configmap", "audit", "--configmaps", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_webhook_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "webhooks.json"
+    path.write_text(_json.dumps([
+        {"name": "image-policy", "kind": "validating",
+         "failure_policy": "Ignore", "timeout_seconds": 10,
+         "ca_bundle": True, "namespace_selector": True,
+         "owner": "platform"},
+    ]))
+    rc = main(["webhook", "audit", "--webhooks", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Webhooks checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_webhook_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "webhooks.json"
+    path.write_text(_json.dumps([
+        {"name": "sidecar-inject", "kind": "mutating",
+         "failure_policy": "Fail", "timeout_seconds": 15,
+         "ca_bundle": False, "namespace_selector": False,
+         "owner": "platform"},
+    ]))
+    rc = main(["webhook", "audit", "--webhooks", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "no caBundle" in out
+    assert "fail-closed stalls deploys" in out
+
+
+def test_webhook_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["webhook", "audit", "--webhooks", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
