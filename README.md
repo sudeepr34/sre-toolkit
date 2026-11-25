@@ -219,6 +219,15 @@ sre-toolkit priority audit --classes classes.json
 
 # Namespace audit: namespaces missing quota, limits, or network policy
 sre-toolkit namespace audit --namespaces namespaces.json
+
+# ServiceAccount audit: cluster-admin bindings, default accounts, or auto-mounted tokens
+sre-toolkit serviceaccount audit --accounts accounts.json
+
+# LimitRange audit: missing defaults or maxes, or no owner
+sre-toolkit limitrange audit --ranges ranges.json
+
+# Pod security audit: privileged pods, host namespaces, or root containers
+sre-toolkit podsecurity audit --pods pods.json
 ```
 
 Example output:
@@ -303,6 +312,9 @@ top errors:
 - [x] Admission webhook audit: unverifiable, slow, or fail-closed webhooks (`webhook` command)
 - [x] PriorityClass audit: invalid values or duplicate global defaults (`priority` command)
 - [x] Namespace audit: namespaces missing quota, limits, or network policy (`namespace` command)
+- [x] ServiceAccount audit: cluster-admin bindings, default accounts, or auto-mounted tokens (`serviceaccount` command)
+- [x] LimitRange audit: missing default or max CPU/memory, or no owner (`limitrange` command)
+- [x] Pod security audit: privileged pods, host namespaces, root containers, or writable rootfs (`podsecurity` command)
 
 ## Development
 

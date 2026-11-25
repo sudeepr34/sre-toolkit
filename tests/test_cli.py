@@ -2140,3 +2140,113 @@ def test_namespace_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["namespace", "audit", "--namespaces", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_serviceaccount_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "accounts.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "namespace": "prod", "is_default": False,
+         "automount_token": False, "cluster_roles": [],
+         "owner": "platform"},
+    ]))
+    rc = main(["serviceaccount", "audit", "--accounts", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Service accounts checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_serviceaccount_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "accounts.json"
+    path.write_text(_json.dumps([
+        {"name": "deployer", "namespace": "prod", "is_default": False,
+         "automount_token": False, "cluster_roles": ["cluster-admin"],
+         "owner": "platform"},
+    ]))
+    rc = main(["serviceaccount", "audit", "--accounts", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| deployer | prod | no | no | cluster-admin | platform | blocked | bound to cluster-admin |" in out
+
+
+def test_serviceaccount_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["serviceaccount", "audit", "--accounts", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
+
+
+def test_limitrange_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "ranges.json"
+    path.write_text(_json.dumps([
+        {"name": "limits", "namespace": "prod", "has_default_cpu": True,
+         "has_default_memory": True, "has_max_cpu": True,
+         "has_max_memory": True, "owner": "platform"},
+    ]))
+    rc = main(["limitrange", "audit", "--ranges", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "LimitRanges checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_limitrange_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "ranges.json"
+    path.write_text(_json.dumps([
+        {"name": "limits", "namespace": "prod", "has_default_cpu": False,
+         "has_default_memory": True, "has_max_cpu": True,
+         "has_max_memory": True, "owner": "platform"},
+    ]))
+    rc = main(["limitrange", "audit", "--ranges", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| limits | prod | no | yes | yes | yes | platform | blocked | no default cpu |" in out
+
+
+def test_limitrange_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["limitrange", "audit", "--ranges", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err
+
+
+def test_podsecurity_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "pods.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "namespace": "prod", "privileged": False,
+         "host_network": False, "host_pid": False, "run_as_root": False,
+         "allow_privilege_escalation": False,
+         "read_only_root_filesystem": True, "owner": "platform"},
+    ]))
+    rc = main(["podsecurity", "audit", "--pods", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Pods checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_podsecurity_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "pods.json"
+    path.write_text(_json.dumps([
+        {"name": "debug", "namespace": "prod", "privileged": True,
+         "host_network": False, "host_pid": False, "run_as_root": False,
+         "allow_privilege_escalation": False,
+         "read_only_root_filesystem": True, "owner": "platform"},
+    ]))
+    rc = main(["podsecurity", "audit", "--pods", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| debug | prod | yes | no | no | no | no | yes | platform | blocked | privileged |" in out
+
+
+def test_podsecurity_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["podsecurity", "audit", "--pods", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

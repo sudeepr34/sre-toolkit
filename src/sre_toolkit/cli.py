@@ -81,6 +81,15 @@ from .priority import to_markdown as pc_to_markdown
 from .namespace import check_namespaces as ns_check_namespaces
 from .namespace import namespaces_from_json as ns_namespaces_from_json
 from .namespace import to_markdown as ns_to_markdown
+from .serviceaccount import check_service_accounts as sa_check_accounts
+from .serviceaccount import service_accounts_from_json as sa_accounts_from_json
+from .serviceaccount import to_markdown as sa_to_markdown
+from .limitrange import check_limit_ranges as lr_check_ranges
+from .limitrange import limit_ranges_from_json as lr_ranges_from_json
+from .limitrange import to_markdown as lr_to_markdown
+from .podsecurity import check_pod_security as ps_check_pods
+from .podsecurity import pod_security_from_json as ps_pods_from_json
+from .podsecurity import to_markdown as ps_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -453,6 +462,42 @@ def cmd_namespace_audit(args: argparse.Namespace) -> int:
         return 2
     results = ns_check_namespaces(ns_namespaces_from_json(data))
     print(ns_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_serviceaccount_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.accounts) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.accounts}: {exc}", file=sys.stderr)
+        return 2
+    results = sa_check_accounts(sa_accounts_from_json(data))
+    print(sa_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_limitrange_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.ranges) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.ranges}: {exc}", file=sys.stderr)
+        return 2
+    results = lr_check_ranges(lr_ranges_from_json(data))
+    print(lr_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_podsecurity_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.pods) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.pods}: {exc}", file=sys.stderr)
+        return 2
+    results = ps_check_pods(ps_pods_from_json(data))
+    print(ps_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -2240,6 +2285,49 @@ def build_parser() -> argparse.ArgumentParser:
         "has_limit_range, has_network_policy, owner}.",
     )
     ns_audit.set_defaults(func=cmd_namespace_audit)
+
+    sa = sub.add_parser("serviceaccount", help="Audit service accounts.")
+    sa_sub = sa.add_subparsers(dest="sa_command", required=True)
+
+    sa_audit = sa_sub.add_parser(
+        "audit", help="Flag risky service accounts from a JSON file."
+    )
+    sa_audit.add_argument(
+        "--accounts",
+        required=True,
+        help="JSON file: list of {name, namespace, is_default, "
+        "automount_token, cluster_roles, owner}.",
+    )
+    sa_audit.set_defaults(func=cmd_serviceaccount_audit)
+
+    lr = sub.add_parser("limitrange", help="Audit LimitRanges.")
+    lr_sub = lr.add_subparsers(dest="lr_command", required=True)
+
+    lr_audit = lr_sub.add_parser(
+        "audit", help="Flag risky LimitRanges from a JSON file."
+    )
+    lr_audit.add_argument(
+        "--ranges",
+        required=True,
+        help="JSON file: list of {name, namespace, has_default_cpu, "
+        "has_default_memory, has_max_cpu, has_max_memory, owner}.",
+    )
+    lr_audit.set_defaults(func=cmd_limitrange_audit)
+
+    ps = sub.add_parser("podsecurity", help="Audit pod security contexts.")
+    ps_sub = ps.add_subparsers(dest="ps_command", required=True)
+
+    ps_audit = ps_sub.add_parser(
+        "audit", help="Flag risky pod security contexts from a JSON file."
+    )
+    ps_audit.add_argument(
+        "--pods",
+        required=True,
+        help="JSON file: list of {name, namespace, privileged, "
+        "host_network, host_pid, run_as_root, "
+        "allow_privilege_escalation, read_only_root_filesystem, owner}.",
+    )
+    ps_audit.set_defaults(func=cmd_podsecurity_audit)
     return parser
 
 
