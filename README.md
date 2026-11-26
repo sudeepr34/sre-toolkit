@@ -228,6 +228,9 @@ sre-toolkit limitrange audit --ranges ranges.json
 
 # Pod security audit: privileged pods, host namespaces, or root containers
 sre-toolkit podsecurity audit --pods pods.json
+
+# Service endpoints audit: no ready endpoints, partial readiness, or a single ready endpoint
+sre-toolkit endpoints audit --services services.json
 ```
 
 Example output:
@@ -315,6 +318,7 @@ top errors:
 - [x] ServiceAccount audit: cluster-admin bindings, default accounts, or auto-mounted tokens (`serviceaccount` command)
 - [x] LimitRange audit: missing default or max CPU/memory, or no owner (`limitrange` command)
 - [x] Pod security audit: privileged pods, host namespaces, root containers, or writable rootfs (`podsecurity` command)
+- [x] Service endpoints audit: no ready endpoints, partial readiness, or a single ready endpoint (`endpoints` command)
 
 ## Development
 

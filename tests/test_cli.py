@@ -2250,3 +2250,37 @@ def test_podsecurity_audit_missing_file_errors(tmp_path, capsys):
     rc = main(["podsecurity", "audit", "--pods", str(tmp_path / "nope.json")])
     assert rc == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_endpoints_audit_clean_exit_0(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "services.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "namespace": "prod", "ready_endpoints": 3,
+         "total_endpoints": 3, "owner": "platform"},
+    ]))
+    rc = main(["endpoints", "audit", "--services", str(path)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Services checked: 1" in out
+    assert "- Blocked: 0" in out
+
+
+def test_endpoints_audit_blocked_exit_1(tmp_path, capsys):
+    import json as _json
+    path = tmp_path / "services.json"
+    path.write_text(_json.dumps([
+        {"name": "api", "namespace": "prod", "ready_endpoints": 0,
+         "total_endpoints": 3, "owner": "platform"},
+    ]))
+    rc = main(["endpoints", "audit", "--services", str(path)])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "- Blocked: 1" in out
+    assert "| api | prod | 0 | 3 | platform | blocked | no ready endpoints |" in out
+
+
+def test_endpoints_audit_missing_file_errors(tmp_path, capsys):
+    rc = main(["endpoints", "audit", "--services", str(tmp_path / "nope.json")])
+    assert rc == 2
+    assert "error:" in capsys.readouterr().err

@@ -90,6 +90,9 @@ from .limitrange import to_markdown as lr_to_markdown
 from .podsecurity import check_pod_security as ps_check_pods
 from .podsecurity import pod_security_from_json as ps_pods_from_json
 from .podsecurity import to_markdown as ps_to_markdown
+from .endpoints import check_endpoints as ep_check_services
+from .endpoints import endpoints_from_json as ep_services_from_json
+from .endpoints import to_markdown as ep_to_markdown
 from .nodes import check_nodes as nodes_check_nodes
 from .nodes import nodes_from_json as nodes_nodes_from_json
 from .nodes import to_markdown as nodes_to_markdown
@@ -498,6 +501,18 @@ def cmd_podsecurity_audit(args: argparse.Namespace) -> int:
         return 2
     results = ps_check_pods(ps_pods_from_json(data))
     print(ps_to_markdown(results))
+    return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
+
+
+def cmd_endpoints_audit(args: argparse.Namespace) -> int:
+    try:
+        with open(args.services) as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read {args.services}: {exc}", file=sys.stderr)
+        return 2
+    results = ep_check_services(ep_services_from_json(data))
+    print(ep_to_markdown(results))
     return 1 if any(r.verdict in ("blocked", "risky") for r in results) else 0
 
 
@@ -2328,6 +2343,20 @@ def build_parser() -> argparse.ArgumentParser:
         "allow_privilege_escalation, read_only_root_filesystem, owner}.",
     )
     ps_audit.set_defaults(func=cmd_podsecurity_audit)
+
+    ep = sub.add_parser("endpoints", help="Audit service endpoints.")
+    ep_sub = ep.add_subparsers(dest="ep_command", required=True)
+
+    ep_audit = ep_sub.add_parser(
+        "audit", help="Flag risky service endpoints from a JSON file."
+    )
+    ep_audit.add_argument(
+        "--services",
+        required=True,
+        help="JSON file: list of {name, namespace, ready_endpoints, "
+        "total_endpoints, owner}.",
+    )
+    ep_audit.set_defaults(func=cmd_endpoints_audit)
     return parser
 
 
